@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" role="img" aria-label="Drinks">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#12312f"/>
+      <stop offset="1" stop-color="#0f766e"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="520" fill="url(#bg)"/>
+  <path d="M315 135h170l-24 250c-5 47-117 47-122 0z" fill="#d9fff9" opacity=".92"/>
+  <path d="M334 230h132l-14 145c-4 31-100 31-104 0z" fill="#f59e0b"/>
+  <path d="M485 135l82-72" stroke="#fef3c7" stroke-width="14" stroke-linecap="round"/>
+  <circle cx="438" cy="200" r="20" fill="#fde68a"/>
+  <circle cx="375" cy="285" r="16" fill="#fde68a"/>
+  <text x="400" y="86" text-anchor="middle" font-family="Arial, sans-serif" font-size="48" font-weight="700" fill="#f0fdfa">Cool Drinks</text>
+</svg>

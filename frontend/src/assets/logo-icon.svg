@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" fill="none">
+  <rect width="240" height="240" rx="40" fill="#15182c"/>
+
+  <!-- circuit lines -->
+  <g stroke="#2ecc71" stroke-width="4" stroke-linecap="round">
+    <line x1="66" y1="96" x2="22" y2="96"/>
+    <line x1="66" y1="124" x2="34" y2="124"/>
+    <line x1="66" y1="152" x2="46" y2="152"/>
+  </g>
+  <g fill="#15182c" stroke="#2ecc71" stroke-width="3">
+    <circle cx="18" cy="96" r="5"/>
+    <circle cx="30" cy="124" r="5"/>
+    <circle cx="42" cy="152" r="5"/>
+  </g>
+
+  <!-- wifi signal -->
+  <g stroke="#2ecc71" stroke-width="5" stroke-linecap="round" fill="none">
+    <path d="M166 52 A 26 26 0 0 1 201 52" opacity="0.7"/>
+    <path d="M175 61 A 14 14 0 0 1 192 61"/>
+  </g>
+  <circle cx="183.5" cy="70" r="4.5" fill="#2ecc71"/>
+
+  <!-- phone outline -->
+  <rect x="66" y="34" width="108" height="176" rx="20" stroke="#4a5577" stroke-width="5"/>
+  <rect x="110" y="48" width="10" height="3" rx="1.5" fill="#4a5577"/>
+  <rect x="124" y="48" width="10" height="3" rx="1.5" fill="#4a5577"/>
+
+  <!-- food cloche -->
+  <circle cx="120" cy="80" r="6" fill="#ff6b35"/>
+  <path d="M74 130 C74 100 94 79 120 79 C146 79 166 100 166 130 Z" fill="#ff6b35"/>
+  <path d="M88 112 C94 96 106 87 117 85" stroke="#ffd9c4" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.55"/>
+  <ellipse cx="120" cy="131" rx="48" ry="8" fill="#e8552a"/>
+
+  <!-- QR code -->
+  <rect x="78" y="150" width="84" height="84" rx="8" fill="#ffffff"/>
+  <g fill="#15182c">
+    <rect x="86" y="158" width="20" height="20"/>
+    <rect x="91" y="163" width="10" height="10" fill="#ffffff"/>
+    <rect x="94" y="166" width="4" height="4"/>
+
+    <rect x="134" y="158" width="20" height="20"/>
+    <rect x="139" y="163" width="10" height="10" fill="#ffffff"/>
+    <rect x="142" y="166" width="4" height="4"/>
+
+    <rect x="86" y="206" width="20" height="20"/>
+    <rect x="91" y="211" width="10" height="10" fill="#ffffff"/>
+    <rect x="94" y="214" width="4" height="4"/>
+
+    <rect x="134" y="182" width="8" height="8"/>
+    <rect x="146" y="182" width="8" height="8"/>
+    <rect x="134" y="194" width="8" height="8"/>
+    <rect x="150" y="196" width="8" height="8"/>
+    <rect x="112" y="182" width="8" height="8"/>
+    <rect x="112" y="206" width="8" height="8"/>
+    <rect x="124" y="212" width="8" height="8"/>
+    <rect x="138" y="218" width="8" height="8"/>
+    <rect x="116" y="160" width="8" height="8"/>
+  </g>
+</svg>

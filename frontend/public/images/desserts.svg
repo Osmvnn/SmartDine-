@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" role="img" aria-label="Desserts">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#32111d"/>
+      <stop offset="1" stop-color="#9f1239"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="520" fill="url(#bg)"/>
+  <path d="M250 350h300l-36 70H286z" fill="#4a1f12"/>
+  <path d="M280 215h240v135H280z" fill="#7c2d12"/>
+  <path d="M280 215c35-64 205-64 240 0z" fill="#f9a8d4"/>
+  <circle cx="400" cy="175" r="28" fill="#dc2626"/>
+  <path d="M310 260h180" stroke="#fde68a" stroke-width="18" stroke-linecap="round"/>
+  <text x="400" y="86" text-anchor="middle" font-family="Arial, sans-serif" font-size="48" font-weight="700" fill="#fff1f2">Sweet Finish</text>
+</svg>
