@@ -112,6 +112,7 @@ import { useToastStore } from '../../store/toast'
 const toast = useToastStore()
 import api from '../../services/api'
 import { formatMoney, getCurrency } from '../../utils/currency'
+import { todayStr, yesterdayStr } from '../../utils/date'
 
 const orders = ref([])
 const currency = ref(getCurrency())
@@ -122,13 +123,6 @@ const statusFilter = ref('')
 const loading = ref(true)
 const historyLoading = ref(true)
 const pagination = ref({ page: 1, limit: 20, total: 0, pages: 1 })
-
-const todayStr = () => new Date().toISOString().split('T')[0]
-const yesterdayStr = () => {
-  const d = new Date()
-  d.setDate(d.getDate() - 1)
-  return d.toISOString().split('T')[0]
-}
 
 const selectedDate = ref(todayStr())
 const customDate = ref(todayStr())

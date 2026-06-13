@@ -6,9 +6,13 @@ const rc = require('../controllers/reservationController')
 
 const { auth, authorize } = require('../middleware/auth')
 
+const optionalAuth = require('../middleware/optionalAuth')
+
 const auditLog = require('../middleware/auditLogger')
 
-router.post('/', rc.createReservation)
+router.post('/', optionalAuth, rc.createReservation)
+
+router.get('/my', auth, rc.getMyReservations)
 
 router.get('/', rc.getReservations)
 

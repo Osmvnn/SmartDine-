@@ -97,6 +97,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import api from '../../services/api'
 import { formatMoney, getCurrency } from '../../utils/currency'
+import { todayStr, yesterdayStr } from '../../utils/date'
 
 const data = ref({})
 const history = ref([])
@@ -106,13 +107,6 @@ const historyLoading = ref(true)
 const currency = ref(getCurrency())
 const formatAmount = (amount) => formatMoney(amount, currency.value)
 const onCurrencyChanged = (event) => { currency.value = event.detail || getCurrency() }
-
-const todayStr = () => new Date().toISOString().split('T')[0]
-const yesterdayStr = () => {
-  const d = new Date()
-  d.setDate(d.getDate() - 1)
-  return d.toISOString().split('T')[0]
-}
 
 const selectedDate = ref(todayStr())
 

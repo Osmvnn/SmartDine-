@@ -43,6 +43,7 @@ onMounted(() => {
   if (auth.isLoggedIn && auth.role) {
     socketStore.connect()
     socketStore.joinRoom(auth.role)
+    if (auth.user?.id) socketStore.joinRoom(`user-${auth.user.id}`)
   }
 })
 
@@ -50,6 +51,7 @@ watch(() => auth.isLoggedIn, (loggedIn) => {
   if (loggedIn && auth.role) {
     socketStore.connect()
     socketStore.joinRoom(auth.role)
+    if (auth.user?.id) socketStore.joinRoom(`user-${auth.user.id}`)
   } else {
     socketStore.disconnect()
   }

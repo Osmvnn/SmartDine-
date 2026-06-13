@@ -227,6 +227,7 @@
 import { ref, onMounted } from 'vue'
 import api from '../../services/api'
 import { useToastStore } from '../../store/toast'
+import { todayStr, yesterdayStr } from '../../utils/date'
 
 const toast = useToastStore()
 
@@ -247,13 +248,6 @@ const summary = ref({
   today: { total: 0, failed_logins: 0, rate_limited: 0, unauthorized: 0, unique_ips: 0 },
   topIps: []
 })
-
-const todayStr = () => new Date().toISOString().split('T')[0]
-const yesterdayStr = () => {
-  const d = new Date()
-  d.setDate(d.getDate() - 1)
-  return d.toISOString().split('T')[0]
-}
 
 const selectedDate = ref(todayStr())
 const customDate = ref(todayStr())

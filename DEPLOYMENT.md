@@ -51,6 +51,7 @@ mysql -h <host> -P <port> -u <user> -p<password> <database> < database/schema.sq
 node database/migrate_v2.js
 node database/migrate_v3.js
 node database/migrate_v4.js
+node database/migrate_v5.js
 node database/seed.js
 ```
 

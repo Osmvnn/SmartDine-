@@ -4,6 +4,20 @@
       <h2><i class="bi bi-calendar-check"></i> Make a Reservation</h2>
     </div>
 
+    <div v-if="auth.isLoggedIn && myReservations.length" class="section-card my-reservations">
+      <h3 class="mb-3"><i class="bi bi-calendar-week"></i> My Reservations</h3>
+      <div v-for="r in myReservations" :key="r.id" class="reservation-row">
+        <div class="reservation-info">
+          <div class="reservation-date">{{ r.reservation_date }} at {{ formatResTime(r.reservation_time) }}</div>
+          <div class="reservation-meta">
+            {{ r.guests }} {{ r.guests === 1 ? 'guest' : 'guests' }}
+            <span v-if="r.table_number"> · Table {{ r.table_number }}</span>
+          </div>
+        </div>
+        <span :class="'status-badge status-' + r.status">{{ r.status }}</span>
+      </div>
+    </div>
+
     <div v-if="submitted" class="section-card success-msg">
       <i class="bi bi-check-circle"></i>
       <h3>Reservation Confirmed!</h3>
@@ -73,11 +87,15 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '../../store/auth'
+import { useSocketStore } from '../../store/socket'
 import api from '../../services/api'
+import { todayStr } from '../../utils/date'
 
 const auth = useAuthStore()
+const socketStore = useSocketStore()
+const myReservations = ref([])
 
 const form = ref({
   customer_name: '',
@@ -95,9 +113,7 @@ const submitted = ref(false)
 const submitting = ref(false)
 const error = ref('')
 
-const minDate = computed(() => {
-  return new Date().toISOString().split('T')[0]
-})
+const minDate = computed(() => todayStr())
 
 async function loadAvailableTables() {
   if (!form.value.reservation_date || !form.value.reservation_time) return
@@ -119,11 +135,40 @@ watch(() => [form.value.reservation_date, form.value.reservation_time, form.valu
   loadAvailableTables()
 })
 
+async function fetchMyReservations() {
+  if (!auth.isLoggedIn) return
+  try {
+    const res = await api.get('/reservations/my')
+    myReservations.value = res.data.data || []
+  } catch (e) {
+    console.error(e)
+  }
+}
+
+function formatResTime(time) {
+  const [h, m] = String(time).split(':')
+  const hour = Number(h)
+  const period = hour >= 12 ? 'PM' : 'AM'
+  const displayHour = hour % 12 || 12
+  return `${displayHour}:${m} ${period}`
+}
+
+const onReservationStatusChanged = () => {
+  fetchMyReservations()
+}
+
 onMounted(() => {
   if (auth.user) {
     form.value.customer_name = auth.user.name || ''
     form.value.customer_email = auth.user.email || ''
   }
+  fetchMyReservations()
+  socketStore.connect()
+  socketStore.socket?.on('reservation-status-changed', onReservationStatusChanged)
+})
+
+onUnmounted(() => {
+  socketStore.socket?.off('reservation-status-changed', onReservationStatusChanged)
 })
 
 async function submitReservation() {
@@ -132,6 +177,7 @@ async function submitReservation() {
   try {
     await api.post('/reservations', form.value)
     submitted.value = true
+    fetchMyReservations()
   } catch (e) {
     error.value = e.response?.data?.message || 'Failed to create reservation'
   } finally {
@@ -280,6 +326,54 @@ form {
   font-size: 13px;
   text-align: center;
 }
+
+.my-reservations {
+  margin-bottom: 20px;
+}
+
+.my-reservations h3 {
+  margin: 0 0 12px;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reservation-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--dark-border);
+}
+
+.reservation-row:last-child {
+  border-bottom: none;
+}
+
+.reservation-date {
+  font-weight: 600;
+}
+
+.reservation-meta {
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+.status-badge {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+  padding: 4px 12px;
+  border-radius: 10px;
+}
+
+.status-pending { background: rgba(245,158,11,0.15); color: #f59e0b; }
+.status-confirmed { background: rgba(59,130,246,0.15); color: #3b82f6; }
+.status-completed { background: rgba(71,85,105,0.15); color: #94a3b8; }
+.status-cancelled { background: rgba(239,68,68,0.15); color: #ef4444; }
+.status-no_show { background: rgba(239,68,68,0.15); color: #ef4444; }
 
 .success-msg {
   text-align: center;

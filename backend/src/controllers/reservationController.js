@@ -36,11 +36,11 @@ exports.createReservation = async (req, res) => {
 
     const [result] = await db.query(
 
-      `INSERT INTO reservations (table_id, customer_name, customer_phone, customer_email, reservation_date, reservation_time, guests, notes) 
+      `INSERT INTO reservations (user_id, table_id, customer_name, customer_phone, customer_email, reservation_date, reservation_time, guests, notes)
 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 
-      [table_id || null, customer_name, customer_phone || null, customer_email || null, reservation_date, reservation_time, guests || 2, notes || null]
+      [req.user?.id || null, table_id || null, customer_name, customer_phone || null, customer_email || null, reservation_date, reservation_time, guests || 2, notes || null]
 
     )
 
@@ -111,6 +111,36 @@ exports.getReservations = async (req, res) => {
 
 }
 
+exports.getMyReservations = async (req, res) => {
+
+  try {
+
+    const [rows] = await db.query(
+
+      `SELECT reservations.*, restaurant_tables.table_number
+
+       FROM reservations
+
+       LEFT JOIN restaurant_tables ON reservations.table_id = restaurant_tables.id
+
+       WHERE reservations.user_id = ?
+
+       ORDER BY reservations.reservation_date DESC, reservations.reservation_time DESC`,
+
+      [req.user.id]
+
+    )
+
+    res.json({ success: true, data: rows })
+
+  } catch (error) {
+
+    res.status(500).json({ success: false, message: error.message })
+
+  }
+
+}
+
 exports.updateReservationStatus = async (req, res) => {
 
   try {
@@ -130,6 +160,64 @@ exports.updateReservationStatus = async (req, res) => {
     const [result] = await db.query('UPDATE reservations SET status = ? WHERE id = ?', [status, id])
 
     if (!result.affectedRows) return res.status(404).json({ success: false, message: 'Reservation not found' })
+
+    const [rows] = await db.query(
+
+      `SELECT reservations.*, restaurant_tables.table_number
+
+       FROM reservations
+
+       LEFT JOIN restaurant_tables ON reservations.table_id = restaurant_tables.id
+
+       WHERE reservations.id = ?`,
+
+      [id]
+
+    )
+
+    const reservation = rows[0]
+
+    if (reservation?.user_id) {
+
+      try {
+
+        const { getIO } = require('../socket')
+
+        const io = getIO()
+
+        if (io) {
+
+          io.to(`user-${reservation.user_id}`).emit('reservation-status-changed', {
+
+            id: reservation.id,
+
+            status,
+
+            reservation_date: reservation.reservation_date,
+
+            reservation_time: reservation.reservation_time,
+
+            table_number: reservation.table_number
+
+          })
+
+        }
+
+      } catch { }
+
+      require('../services/pushService').notifyUser(reservation.user_id, {
+
+        title: 'Reservation Update',
+
+        body: `Your reservation for ${reservation.reservation_date} at ${reservation.reservation_time} is now ${status}.`,
+
+        tag: `reservation-${reservation.id}`,
+
+        url: '/customer/reservations'
+
+      }).catch(() => {})
+
+    }
 
     res.json({ success: true, message: 'Reservation status updated' })
 

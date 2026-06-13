@@ -21,7 +21,12 @@
       </div>
     </div>
 
-    <div class="filter-tabs">
+    <div class="view-tabs">
+      <button :class="['view-tab', view === 'active' ? 'active' : '']" @click="view = 'active'">Active Orders</button>
+      <button :class="['view-tab', view === 'history' ? 'active' : '']" @click="switchToHistory">Order History</button>
+    </div>
+
+    <div v-if="view === 'active'" class="filter-tabs">
       <button
         v-for="tab in tabs"
         :key="tab.value"
@@ -32,7 +37,7 @@
       </button>
     </div>
 
-    <div class="container-fluid mt-4 px-4">
+    <div v-if="view === 'active'" class="container-fluid mt-4 px-4">
 
       <div v-if="loading" class="text-center mt-5">Loading orders...</div>
 
@@ -117,6 +122,75 @@
       </TransitionGroup>
 
     </div>
+
+    <div v-else class="container-fluid mt-4 px-4">
+
+      <div class="section-card mb-4 history-card">
+        <div class="history-top">
+          <p class="history-hint">Select a day to view its orders, or pick a custom date</p>
+          <input v-model="customDate" type="date" class="filter-input" @change="onCustomDate" />
+        </div>
+        <div class="day-list">
+          <div
+            v-for="d in history"
+            :key="d.date"
+            :class="['day-chip', selectedDate === d.date ? 'active' : '']"
+            @click="selectDate(d.date)"
+          >
+            <span class="day-label">{{ formatDayShort(d.date) }}</span>
+            <span class="day-orders">{{ d.order_count }} orders</span>
+          </div>
+          <template v-if="historyLoading">
+            <div v-for="n in 5" :key="'ph'+n" class="day-chip placeholder"></div>
+          </template>
+        </div>
+      </div>
+
+      <div v-if="historyOrdersLoading" class="text-center mt-5">Loading orders...</div>
+
+      <div v-else-if="historyOrders.length === 0" class="text-center mt-5 text-muted-custom">
+        No orders for {{ formatDayShort(selectedDate) }}
+      </div>
+
+      <div v-else class="row">
+        <div v-for="order in historyOrders" :key="order.id" class="col-lg-4 col-md-6 mb-4">
+          <div :class="['order-card', 'border-' + order.status]">
+            <div class="card-top">
+              <h5>Order #{{ order.id }}</h5>
+              <span :class="'status-badge status-' + order.status">{{ order.status }}</span>
+            </div>
+
+            <div class="table-info">
+              Table #{{ order.table_number }}
+              <span class="time">{{ formatTime(order.created_at) }}</span>
+            </div>
+
+            <div class="items-list">
+              <div v-for="item in order.items" :key="item.id" class="item-line">
+                <div class="item-name-col">
+                  <span>{{ item.quantity }}× {{ item.name }}</span>
+                  <div v-if="item.modifiers?.length" class="item-modifiers">
+                    <i class="bi bi-pencil-square"></i> {{ item.modifiers.map(m => m.name).join(', ') }}
+                  </div>
+                </div>
+                <span class="item-status-badge" :class="'item-status-' + item.status">{{ item.status }}</span>
+              </div>
+            </div>
+
+            <div v-if="order.notes" class="notes">
+              <i class="bi bi-sticky"></i> {{ order.notes }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="historyPagination.pages > 1" class="pagination-bar">
+        <button class="page-btn" :disabled="historyPagination.page <= 1" @click="fetchHistoryOrders(historyPagination.page - 1)">← Prev</button>
+        <span class="page-info">Page {{ historyPagination.page }} of {{ historyPagination.pages }} ({{ historyPagination.total }} orders)</span>
+        <button class="page-btn" :disabled="historyPagination.page >= historyPagination.pages" @click="fetchHistoryOrders(historyPagination.page + 1)">Next →</button>
+      </div>
+
+    </div>
   </div>
 </template>
 
@@ -124,11 +198,21 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import api from '../../services/api'
 import { useSocketStore } from '../../store/socket'
+import { todayStr, yesterdayStr } from '../../utils/date'
 
 const socketStore = useSocketStore()
 const orders = ref([])
 const loading = ref(true)
 const activeTab = ref('all')
+const view = ref('active')
+
+const history = ref([])
+const historyLoading = ref(false)
+const selectedDate = ref(todayStr())
+const customDate = ref(todayStr())
+const historyOrders = ref([])
+const historyOrdersLoading = ref(false)
+const historyPagination = ref({ page: 1, limit: 20, total: 0, pages: 1 })
 
 const tabs = [
   { value: 'all', label: 'All' },
@@ -181,6 +265,64 @@ const timeAgo = (date) => {
   if (diff < 1) return 'Just now'
   if (diff < 60) return `${diff}m ago`
   return `${Math.floor(diff / 60)}h ${diff % 60}m ago`
+}
+
+const formatTime = (date) => {
+  return new Date(date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+}
+
+const formatDayShort = (dateStr) => {
+  if (dateStr === todayStr()) return 'Today'
+  if (dateStr === yesterdayStr()) return 'Yesterday'
+  return new Date(dateStr).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+}
+
+const fetchHistory = async () => {
+  historyLoading.value = true
+  try {
+    const res = await api.get('/kitchen/orders/history', { params: { days: 14 } })
+    const rows = res.data.data || []
+    if (!rows.some(r => r.date === todayStr())) {
+      rows.unshift({ date: todayStr(), order_count: 0 })
+    }
+    history.value = rows
+  } catch (err) {
+    console.error('Failed to fetch order history')
+  } finally {
+    historyLoading.value = false
+  }
+}
+
+const fetchHistoryOrders = async (page = 1) => {
+  historyOrdersLoading.value = true
+  try {
+    const res = await api.get('/kitchen/orders/by-date', {
+      params: { date: selectedDate.value, page, limit: historyPagination.value.limit }
+    })
+    historyOrders.value = res.data.data
+    historyPagination.value = res.data.pagination
+  } catch (err) {
+    console.error('Failed to fetch order history')
+  } finally {
+    historyOrdersLoading.value = false
+  }
+}
+
+const selectDate = (date) => {
+  selectedDate.value = date
+  customDate.value = date
+  fetchHistoryOrders(1)
+}
+
+const onCustomDate = () => {
+  selectedDate.value = customDate.value
+  fetchHistoryOrders(1)
+}
+
+const switchToHistory = () => {
+  view.value = 'history'
+  if (!history.value.length) fetchHistory()
+  fetchHistoryOrders(1)
 }
 
 const isClockedIn = ref(false)
@@ -313,6 +455,31 @@ onUnmounted(() => {
   color: var(--text-primary);
 }
 
+.view-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 15px 30px 0;
+  background: var(--dark-surface);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.view-tab {
+  padding: 8px 18px;
+  border-radius: 10px 10px 0 0;
+  border: none;
+  background: var(--dark-hover);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: 0.3s;
+  font-weight: 600;
+}
+
+.view-tab.active {
+  background: var(--primary);
+  color: #fff;
+}
+
 .filter-tabs {
   display: flex;
   gap: 8px;
@@ -324,6 +491,15 @@ onUnmounted(() => {
 }
 
 @media (max-width: 480px) {
+  .view-tabs {
+    padding: 12px 16px 0;
+    gap: 6px;
+  }
+  .view-tab {
+    padding: 8px 14px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
   .filter-tabs {
     padding: 12px 16px;
     gap: 6px;
@@ -360,6 +536,49 @@ onUnmounted(() => {
 .border-confirmed { border-left-color: #f59e0b; }
 .border-preparing { border-left-color: #3b82f6; }
 .border-ready { border-left-color: #10b981; }
+.border-pending { border-left-color: #94a3b8; }
+.border-served { border-left-color: #10b981; }
+.border-completed { border-left-color: #64748b; }
+.border-cancelled { border-left-color: #ef4444; }
+
+.history-card { background: var(--dark-card); border-radius: 15px; padding: 25px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.history-top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; }
+.history-hint { color: var(--text-secondary); font-size: 13px; margin: 0; }
+
+.day-list { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+.day-chip {
+  flex: 0 0 auto;
+  min-width: 110px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--dark-surface);
+  border: 1px solid var(--dark-border);
+  cursor: pointer;
+  transition: 0.2s;
+}
+.day-chip:hover { border-color: var(--primary); }
+.day-chip.active { border-color: var(--primary); background: var(--primary-light); }
+.day-chip.placeholder { opacity: 0.3; pointer-events: none; }
+.day-label { font-weight: 700; font-size: 13px; color: var(--text-primary); }
+.day-orders { font-size: 12px; color: var(--text-secondary); }
+
+.filter-input {
+  padding: 8px 12px;
+  border: 1px solid var(--dark-border);
+  border-radius: 8px;
+  background: var(--dark-surface);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.pagination-bar { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 18px; flex-wrap: wrap; }
+.page-btn { background: var(--dark-hover); border: 1px solid var(--dark-border); color: var(--text-primary); padding: 7px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+.page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.page-btn:not(:disabled):hover { border-color: var(--primary); }
+.page-info { color: var(--text-secondary); font-size: 13px; }
 
 .card-top {
   display: flex;
@@ -481,9 +700,13 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
+.status-pending { background: rgba(148,163,184,0.15); color: #94a3b8; }
 .status-confirmed { background: rgba(59,130,246,0.15); color: #3b82f6; }
 .status-preparing { background: rgba(249,115,22,0.15); color: #f97316; }
 .status-ready { background: rgba(168,85,247,0.15); color: #a855f7; }
+.status-served { background: rgba(16,185,129,0.15); color: #10b981; }
+.status-completed { background: rgba(100,116,139,0.15); color: #94a3b8; }
+.status-cancelled { background: rgba(239,68,68,0.15); color: #ef4444; }
 
 .text-muted-custom { color: var(--text-secondary); }
 

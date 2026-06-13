@@ -164,7 +164,7 @@ CREATE TABLE payments (
 CREATE TABLE waiter_requests (
   id INT AUTO_INCREMENT PRIMARY KEY,
   table_id INT NOT NULL,
-  type ENUM('help','water','salt','cleaning','complaint') NOT NULL,
+  type ENUM('help','water','salt','cleaning','complaint','bill') NOT NULL,
   status ENUM('pending','handled') DEFAULT 'pending',
   notes TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -200,6 +200,7 @@ CREATE TABLE order_status_history (
 
 CREATE TABLE reservations (
   id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NULL,
   table_id INT,
   customer_name VARCHAR(100) NOT NULL,
   customer_phone VARCHAR(20),
@@ -210,7 +211,8 @@ CREATE TABLE reservations (
   status ENUM('pending','confirmed','cancelled','completed','no_show') DEFAULT 'pending',
   notes TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (table_id) REFERENCES restaurant_tables(id) ON DELETE SET NULL
+  FOREIGN KEY (table_id) REFERENCES restaurant_tables(id) ON DELETE SET NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE TABLE loyalty_points (

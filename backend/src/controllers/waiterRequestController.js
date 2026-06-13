@@ -5,9 +5,9 @@ exports.createWaiterRequest = async (req, res) => {
 
   try {
 
-    const { table_id, type } = req.body
+    const { table_id, type, notes } = req.body
 
-    const allowedTypes = ['help', 'water', 'salt', 'cleaning', 'complaint']
+    const allowedTypes = ['help', 'water', 'salt', 'cleaning', 'complaint', 'bill']
 
     if (!table_id || !allowedTypes.includes(type)) {
 
@@ -23,9 +23,9 @@ exports.createWaiterRequest = async (req, res) => {
 
     const [result] = await db.query(
 
-      'INSERT INTO waiter_requests (table_id, type, status) VALUES (?, ?, "pending")',
+      'INSERT INTO waiter_requests (table_id, type, status, notes) VALUES (?, ?, "pending", ?)',
 
-      [table_id, type]
+      [table_id, type, notes || null]
 
     )
 
@@ -37,7 +37,10 @@ exports.createWaiterRequest = async (req, res) => {
 
       if (io) {
 
-        io.to('waiter').emit('new-waiter-request', { id: result.insertId, table_id, type })
+        const [tables] = await db.query('SELECT table_number FROM restaurant_tables WHERE id = ?', [table_id])
+        const table_number = tables[0]?.table_number ?? null
+
+        io.to('waiter').emit('new-waiter-request', { id: result.insertId, table_id, table_number, type })
 
       }
 

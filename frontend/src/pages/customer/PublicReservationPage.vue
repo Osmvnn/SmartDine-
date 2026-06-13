@@ -126,6 +126,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useAuthStore } from '../../store/auth'
 import api from '../../services/api'
 import logoIcon from '../../assets/logo-icon.svg'
+import { todayStr } from '../../utils/date'
 
 const auth = useAuthStore()
 
@@ -152,7 +153,7 @@ const form = ref({
   notes: ''
 })
 
-const minDate = computed(() => new Date().toISOString().split('T')[0])
+const minDate = computed(() => todayStr())
 
 onMounted(() => {
   if (auth.token && !auth.user) auth.fetchUser?.()

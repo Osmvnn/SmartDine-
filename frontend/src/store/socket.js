@@ -6,7 +6,7 @@ export const useSocketStore = defineStore('socket', {
     socket: null,
     connected: false,
     notifications: [],
-    currentRoom: null
+    rooms: []
   }),
   actions: {
     connect() {
@@ -19,9 +19,7 @@ export const useSocketStore = defineStore('socket', {
 
       this.socket.on('connect', () => {
         this.connected = true
-        if (this.currentRoom) {
-          this.socket.emit('join', this.currentRoom)
-        }
+        this.rooms.forEach(room => this.socket.emit('join', room))
       })
 
       this.socket.on('disconnect', () => {
@@ -41,7 +39,16 @@ export const useSocketStore = defineStore('socket', {
       })
 
       this.socket.on('new-waiter-request', (data) => {
-        this.addNotification('Waiter Request', `Table ${data.table_id}: ${data.type}`)
+        const table = data.table_number ?? data.table_id
+        if (data.type === 'bill') {
+          this.addNotification('Bill Requested', `Table ${table}: bring the receipt from the cashier for payment`)
+        } else {
+          this.addNotification('Waiter Request', `Table ${table}: ${data.type}`)
+        }
+      })
+
+      this.socket.on('reservation-status-changed', (data) => {
+        this.addNotification('Reservation Update', `Your reservation for ${data.reservation_date} at ${data.reservation_time} is now ${data.status}`)
       })
 
       this.socket.on('order-paid', (data) => {
@@ -75,16 +82,16 @@ export const useSocketStore = defineStore('socket', {
     },
 
     joinRoom(room) {
-      this.currentRoom = room
+      if (!this.rooms.includes(room)) {
+        this.rooms.push(room)
+      }
       if (this.socket) {
         this.socket.emit('join', room)
       }
     },
 
     leaveRoom(room) {
-      if (this.currentRoom === room) {
-        this.currentRoom = null
-      }
+      this.rooms = this.rooms.filter(r => r !== room)
       if (this.socket) {
         this.socket.emit('leave', room)
       }
@@ -119,7 +126,7 @@ export const useSocketStore = defineStore('socket', {
         this.socket = null
         this.connected = false
       }
-      this.currentRoom = null
+      this.rooms = []
     }
   }
 })

@@ -113,6 +113,19 @@
             </div>
           </div>
 
+          <div v-if="canRequestBill || billRequested" class="detail-card mt-4 bill-request-card">
+            <h5 class="mb-3"><i class="bi bi-receipt"></i> Bill</h5>
+            <div v-if="!billRequested">
+              <p class="bill-text">All done? Let your waiter know you're ready to pay.</p>
+              <button class="btn-request-bill" @click="requestBill" :disabled="requestingBill">
+                {{ requestingBill ? 'Notifying waiter...' : 'Done Eating - Request Bill' }}
+              </button>
+            </div>
+            <div v-else class="bill-requested-msg">
+              <i class="bi bi-check-circle"></i> Your waiter has been notified and will bring the receipt for payment to your table shortly.
+            </div>
+          </div>
+
           <div v-if="canCancel" class="mt-4">
             <button class="btn-cancel-order" @click="cancelOrder" :disabled="cancelling">
               {{ cancelling ? 'Cancelling...' : '✕ Cancel Order' }}
@@ -181,6 +194,28 @@ const paymentJustUpdated = ref(false)
 
 const cancelling = ref(false)
 const canCancel = computed(() => ['pending', 'confirmed'].includes(order.value.status))
+
+const billRequested = ref(false)
+const requestingBill = ref(false)
+const canRequestBill = computed(() => {
+  return order.value.status === 'served' &&
+    payment.value?.payment_timing === 'post' &&
+    payment.value?.status === 'pending'
+})
+
+const requestBill = async () => {
+  requestingBill.value = true
+  try {
+    await api.post('/waiter-requests', { table_id: order.value.table_id, type: 'bill' })
+    billRequested.value = true
+    sessionStorage.setItem(`bill-requested-${orderId.value}`, '1')
+    toast.success('Your waiter will bring the receipt for payment shortly.')
+  } catch (err) {
+    toast.error(err.response?.data?.message || 'Failed to notify the waiter')
+  } finally {
+    requestingBill.value = false
+  }
+}
 
 const pushSupported = ref(false)
 const pushEnabled = ref(false)
@@ -354,6 +389,7 @@ const handlePaymentUpdate = (payload) => {
 
 onMounted(() => {
   window.addEventListener('currency-changed', onCurrencyChanged)
+  billRequested.value = sessionStorage.getItem(`bill-requested-${orderId.value}`) === '1'
   fetchOrder()
   socketStore.connect()
   socketStore.socket?.on('order-status-changed', handleStatusChange)
@@ -660,6 +696,43 @@ onUnmounted(() => {
   border: none;
   border-radius: 10px;
   color: white;
+}
+
+.bill-request-card {
+  border-color: var(--secondary);
+}
+
+.bill-text {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin-bottom: 14px;
+}
+
+.btn-request-bill {
+  width: 100%;
+  padding: 14px;
+  background: var(--secondary);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.btn-request-bill:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.bill-requested-msg {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #10b981;
+  font-weight: 600;
+  font-size: 14px;
 }
 
 .btn-cancel-order {

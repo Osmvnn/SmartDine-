@@ -64,18 +64,12 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import api from '../../services/api'
+import { todayStr, yesterdayStr } from '../../utils/date'
 
 const shifts = ref([])
 const history = ref([])
 const loading = ref(true)
 const historyLoading = ref(true)
-
-const todayStr = () => new Date().toISOString().split('T')[0]
-const yesterdayStr = () => {
-  const d = new Date()
-  d.setDate(d.getDate() - 1)
-  return d.toISOString().split('T')[0]
-}
 
 const selectedDate = ref(todayStr())
 const customDate = ref(todayStr())

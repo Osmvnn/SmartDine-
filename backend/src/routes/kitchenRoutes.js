@@ -8,6 +8,10 @@ const { auth, authorize } = require('../middleware/auth')
 
 router.get('/orders', auth, authorize('kitchen', 'admin'), kitchenController.getKitchenOrders)
 
+router.get('/orders/history', auth, authorize('kitchen', 'admin'), kitchenController.getOrdersHistory)
+
+router.get('/orders/by-date', auth, authorize('kitchen', 'admin'), kitchenController.getOrdersByDate)
+
 router.put('/orders/:id/status', auth, authorize('kitchen', 'admin'), kitchenController.updateKitchenOrderStatus)
 
 router.put('/orders/:id/items/:itemId/status', auth, authorize('kitchen', 'admin', 'manager'), kitchenController.updateOrderItemStatus)

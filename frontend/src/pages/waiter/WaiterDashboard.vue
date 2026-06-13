@@ -114,8 +114,9 @@
 
               <div class="request-type">
                 <span class="type-icon"><i :class="'bi bi-' + getIcon(req.type)"></i></span>
-                <span class="type-label">{{ req.type }}</span>
+                <span class="type-label">{{ getLabel(req.type) }}</span>
               </div>
+              <p v-if="req.type === 'bill'" class="request-hint">Bring the receipt from the cashier for payment</p>
 
               <div class="request-time">{{ formatTime(req.created_at) }}</div>
 
@@ -131,10 +132,6 @@
             </div>
           </div>
         </TransitionGroup>
-      </template>
-
-      <template v-else-if="view === 'payments'">
-        <PendingPaymentsPanel ref="paymentsPanel" @update:count="paymentCount = $event" />
       </template>
 
       <template v-else-if="view === 'tables'">
@@ -160,6 +157,10 @@
           </div>
         </div>
       </template>
+
+      <div v-show="view === 'payments'">
+        <PendingPaymentsPanel ref="paymentsPanel" @update:count="paymentCount = $event" />
+      </div>
 
     </div>
   </div>
@@ -268,8 +269,13 @@ const markHandled = async (id) => {
 }
 
 const getIcon = (type) => {
-  const icons = { help: 'person-raised-hand', water: 'droplet', salt: 'cup-hot', cleaning: 'stars', complaint: 'chat-left-text' }
+  const icons = { help: 'person-raised-hand', water: 'droplet', salt: 'cup-hot', cleaning: 'stars', complaint: 'chat-left-text', bill: 'receipt' }
   return icons[type] || 'question-circle'
+}
+
+const getLabel = (type) => {
+  if (type === 'bill') return 'Bill requested'
+  return type
 }
 
 const timeAgo = (date) => {
@@ -645,6 +651,12 @@ onUnmounted(() => {
   font-size: 18px;
   font-weight: 600;
   text-transform: capitalize;
+}
+
+.request-hint {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin: -4px 0 10px;
 }
 
 .request-time {
