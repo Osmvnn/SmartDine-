@@ -141,7 +141,7 @@ const getImageUrl = (url) => {
 }
 const hasRealPhoto = (item) => {
   const url = item.image_url
-  return !!url && !url.startsWith('/images/')
+  return !!url && !/^\/images\/[^/]+\.svg$/.test(url)
 }
 
 const goToMenu = () => {

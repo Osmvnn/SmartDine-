@@ -49,8 +49,8 @@ module.exports = { photoKeywords }
 if (require.main === module) {
   const db = require('../src/config/db')
   ;(async () => {
-    for (const [id, keywords] of Object.entries(photoKeywords)) {
-      const url = `https://loremflickr.com/400/300/${keywords}?lock=${id}`
+    for (const id of Object.keys(photoKeywords)) {
+      const url = `/images/menu/${id}.jpg`
       try {
         await db.query('UPDATE menu_items SET image_url = ? WHERE id = ?', [url, id])
         console.log('OK   ', id, url)
