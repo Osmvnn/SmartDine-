@@ -88,15 +88,3 @@ The application runs on `http://localhost:5173`.
 - **Cashier** - confirm pending physical payments
 - **Customer** - browse menu, place orders, pay, request waiter, make
   reservations, earn loyalty points
-
-## Tests
-
-```bash
-cd backend
-npm test
-```
-
-## Deployment
-
-See [DEPLOYMENT.md](DEPLOYMENT.md) for deploying the backend (Railway) and
-frontend (Vercel).

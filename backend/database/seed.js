@@ -94,85 +94,85 @@ async function seed() {
 
       INSERT IGNORE INTO menu_items (id, category_id, name, description, price, image_url, is_available, prep_time_minutes, dietary_tags) VALUES
 
-      (1, 1, 'Caesar Salad', 'Fresh romaine lettuce with parmesan and caesar dressing', 8.99, '/images/appetizers.svg', 1, 10, 'vegetarian'),
+      (1, 1, 'Caesar Salad', 'Fresh romaine lettuce with parmesan and caesar dressing', 8.99, '/images/menu/1.jpg', 1, 10, 'vegetarian'),
 
-      (2, 1, 'Chicken Wings', 'Crispy buffalo wings served with ranch dip', 10.99, '/images/appetizers.svg', 1, 14, 'spicy'),
+      (2, 1, 'Chicken Wings', 'Crispy buffalo wings served with ranch dip', 10.99, '/images/menu/2.jpg', 1, 14, 'spicy'),
 
-      (3, 1, 'Garlic Bread', 'Toasted artisan bread with garlic butter', 5.99, '/images/appetizers.svg', 1, 8, 'vegetarian'),
+      (3, 1, 'Garlic Bread', 'Toasted artisan bread with garlic butter', 5.99, '/images/menu/3.jpg', 1, 8, 'vegetarian'),
 
-      (4, 1, 'Soup of the Day', 'Chef special daily soup with bread', 6.99, '/images/appetizers.svg', 1, 10, 'vegetarian'),
+      (4, 1, 'Soup of the Day', 'Chef special daily soup with bread', 6.99, '/images/menu/4.jpg', 1, 10, 'vegetarian'),
 
-      (5, 1, 'Spring Rolls', 'Crispy vegetable spring rolls with sweet chili sauce', 7.99, '/images/appetizers.svg', 1, 9, 'vegetarian'),
+      (5, 1, 'Spring Rolls', 'Crispy vegetable spring rolls with sweet chili sauce', 7.99, '/images/menu/5.jpg', 1, 9, 'vegetarian'),
 
-      (6, 2, 'Grilled Chicken', 'Herb-marinated grilled chicken breast with vegetables', 15.99, '/images/main-course.svg', 1, 18, 'gluten-free'),
+      (6, 2, 'Grilled Chicken', 'Herb-marinated grilled chicken breast with vegetables', 15.99, '/images/menu/6.jpg', 1, 18, 'gluten-free'),
 
-      (7, 2, 'Beef Steak', 'Premium beef steak cooked to perfection with sides', 22.99, '/images/main-course.svg', 1, 24, 'gluten-free'),
+      (7, 2, 'Beef Steak', 'Premium beef steak cooked to perfection with sides', 22.99, '/images/menu/7.jpg', 1, 24, 'gluten-free'),
 
-      (8, 2, 'Pasta Carbonara', 'Creamy Italian pasta with crispy bacon', 13.99, '/images/main-course.svg', 1, 16, ''),
+      (8, 2, 'Pasta Carbonara', 'Creamy Italian pasta with crispy bacon', 13.99, '/images/menu/8.jpg', 1, 16, ''),
 
-      (9, 2, 'Fish & Chips', 'Golden battered cod with seasoned fries', 14.99, '/images/main-course.svg', 1, 18, ''),
+      (9, 2, 'Fish & Chips', 'Golden battered cod with seasoned fries', 14.99, '/images/menu/9.jpg', 1, 18, ''),
 
-      (10, 2, 'Veggie Burger', 'Plant-based burger with fresh toppings', 12.99, '/images/main-course.svg', 1, 15, 'vegetarian'),
+      (10, 2, 'Veggie Burger', 'Plant-based burger with fresh toppings', 12.99, '/images/menu/10.jpg', 1, 15, 'vegetarian'),
 
-      (11, 2, 'Lamb Chops', 'Tender grilled lamb chops with mint sauce', 24.99, '/images/main-course.svg', 1, 24, 'gluten-free'),
+      (11, 2, 'Lamb Chops', 'Tender grilled lamb chops with mint sauce', 24.99, '/images/menu/11.jpg', 1, 24, 'gluten-free'),
 
-      (12, 3, 'Fresh Orange Juice', 'Freshly squeezed orange juice', 4.99, '/images/drinks.svg', 1, 4, 'vegan,gluten-free'),
+      (12, 3, 'Fresh Orange Juice', 'Freshly squeezed orange juice', 4.99, '/images/menu/12.jpg', 1, 4, 'vegan,gluten-free'),
 
-      (13, 3, 'Soft Drink', 'Coca-Cola, Sprite, or Fanta', 2.99, '/images/drinks.svg', 1, 2, 'vegan'),
+      (13, 3, 'Soft Drink', 'Coca-Cola, Sprite, or Fanta', 2.99, '/images/menu/13.jpg', 1, 2, 'vegan'),
 
-      (14, 3, 'Cappuccino', 'Italian style cappuccino', 4.49, '/images/drinks.svg', 1, 5, 'vegetarian'),
+      (14, 3, 'Cappuccino', 'Italian style cappuccino', 4.49, '/images/menu/14.jpg', 1, 5, 'vegetarian'),
 
-      (15, 3, 'Iced Tea', 'Refreshing lemon iced tea', 3.49, '/images/drinks.svg', 1, 3, 'vegan'),
+      (15, 3, 'Iced Tea', 'Refreshing lemon iced tea', 3.49, '/images/menu/15.jpg', 1, 3, 'vegan'),
 
-      (16, 3, 'Mineral Water', 'Still or sparkling mineral water', 1.99, '/images/drinks.svg', 1, 1, 'vegan,gluten-free'),
+      (16, 3, 'Mineral Water', 'Still or sparkling mineral water', 1.99, '/images/menu/16.jpg', 1, 1, 'vegan,gluten-free'),
 
-      (17, 4, 'Chocolate Lava Cake', 'Rich chocolate cake with molten center', 8.99, '/images/desserts.svg', 1, 12, 'vegetarian'),
+      (17, 4, 'Chocolate Lava Cake', 'Rich chocolate cake with molten center', 8.99, '/images/menu/17.jpg', 1, 12, 'vegetarian'),
 
-      (18, 4, 'Ice Cream Sundae', 'Three scoops with toppings and whipped cream', 6.99, '/images/desserts.svg', 1, 6, 'vegetarian'),
+      (18, 4, 'Ice Cream Sundae', 'Three scoops with toppings and whipped cream', 6.99, '/images/menu/18.jpg', 1, 6, 'vegetarian'),
 
-      (19, 4, 'New York Cheesecake', 'Classic New York style cheesecake', 7.99, '/images/desserts.svg', 1, 6, 'vegetarian'),
+      (19, 4, 'New York Cheesecake', 'Classic New York style cheesecake', 7.99, '/images/menu/19.jpg', 1, 6, 'vegetarian'),
 
-      (20, 4, 'Tiramisu', 'Traditional Italian tiramisu', 8.49, '/images/desserts.svg', 1, 6, 'vegetarian'),
+      (20, 4, 'Tiramisu', 'Traditional Italian tiramisu', 8.49, '/images/menu/20.jpg', 1, 6, 'vegetarian'),
 
-      (21, 5, 'Turkish Breakfast Plate', 'Eggs, cheese, olives, tomato, cucumber, honey, and bread', 12.50, '/images/main-course.svg', 1, 12, 'vegetarian'),
+      (21, 5, 'Turkish Breakfast Plate', 'Eggs, cheese, olives, tomato, cucumber, honey, and bread', 12.50, '/images/menu/21.jpg', 1, 12, 'vegetarian'),
 
-      (22, 5, 'Avocado Toast', 'Sourdough toast with avocado, herbs, and poached egg', 9.90, '/images/main-course.svg', 1, 10, 'vegetarian'),
+      (22, 5, 'Avocado Toast', 'Sourdough toast with avocado, herbs, and poached egg', 9.90, '/images/menu/22.jpg', 1, 10, 'vegetarian'),
 
-      (23, 5, 'Omelette', 'Three-egg omelette with cheese and herbs', 8.50, '/images/main-course.svg', 1, 8, 'vegetarian,gluten-free'),
+      (23, 5, 'Omelette', 'Three-egg omelette with cheese and herbs', 8.50, '/images/menu/23.jpg', 1, 8, 'vegetarian,gluten-free'),
 
-      (24, 5, 'Pancake Stack', 'Fluffy pancakes with maple syrup and berries', 8.75, '/images/desserts.svg', 1, 10, 'vegetarian'),
+      (24, 5, 'Pancake Stack', 'Fluffy pancakes with maple syrup and berries', 8.75, '/images/menu/24.jpg', 1, 10, 'vegetarian'),
 
-      (25, 6, 'Margherita Pizza', 'Tomato sauce, mozzarella, and basil', 11.99, '/images/main-course.svg', 1, 15, 'vegetarian'),
+      (25, 6, 'Margherita Pizza', 'Tomato sauce, mozzarella, and basil', 11.99, '/images/menu/25.jpg', 1, 15, 'vegetarian'),
 
-      (26, 6, 'Pepperoni Pizza', 'Mozzarella, pepperoni, and oregano', 13.99, '/images/main-course.svg', 1, 16, ''),
+      (26, 6, 'Pepperoni Pizza', 'Mozzarella, pepperoni, and oregano', 13.99, '/images/menu/26.jpg', 1, 16, ''),
 
-      (27, 6, 'Chicken BBQ Pizza', 'BBQ sauce, chicken, onion, and mozzarella', 14.99, '/images/main-course.svg', 1, 17, ''),
+      (27, 6, 'Chicken BBQ Pizza', 'BBQ sauce, chicken, onion, and mozzarella', 14.99, '/images/menu/27.jpg', 1, 17, ''),
 
-      (28, 6, 'Vegetable Pizza', 'Peppers, mushrooms, onion, olives, and mozzarella', 12.99, '/images/main-course.svg', 1, 16, 'vegetarian'),
+      (28, 6, 'Vegetable Pizza', 'Peppers, mushrooms, onion, olives, and mozzarella', 12.99, '/images/menu/28.jpg', 1, 16, 'vegetarian'),
 
-      (29, 7, 'Grilled Salmon', 'Salmon fillet with lemon butter and vegetables', 21.99, '/images/main-course.svg', 1, 20, 'gluten-free'),
+      (29, 7, 'Grilled Salmon', 'Salmon fillet with lemon butter and vegetables', 21.99, '/images/menu/29.jpg', 1, 20, 'gluten-free'),
 
-      (30, 7, 'Shrimp Linguine', 'Linguine pasta with shrimp, garlic, and tomato sauce', 18.99, '/images/main-course.svg', 1, 18, ''),
+      (30, 7, 'Shrimp Linguine', 'Linguine pasta with shrimp, garlic, and tomato sauce', 18.99, '/images/menu/30.jpg', 1, 18, ''),
 
-      (31, 7, 'Sea Bass Plate', 'Pan-seared sea bass with herb potatoes', 23.50, '/images/main-course.svg', 1, 22, 'gluten-free'),
+      (31, 7, 'Sea Bass Plate', 'Pan-seared sea bass with herb potatoes', 23.50, '/images/menu/31.jpg', 1, 22, 'gluten-free'),
 
-      (32, 7, 'Calamari', 'Crispy calamari with lemon aioli', 12.75, '/images/appetizers.svg', 1, 12, ''),
+      (32, 7, 'Calamari', 'Crispy calamari with lemon aioli', 12.75, '/images/menu/32.jpg', 1, 12, ''),
 
-      (33, 8, 'Chicken Quinoa Bowl', 'Quinoa, grilled chicken, avocado, greens, and tahini dressing', 14.50, '/images/main-course.svg', 1, 12, 'gluten-free'),
+      (33, 8, 'Chicken Quinoa Bowl', 'Quinoa, grilled chicken, avocado, greens, and tahini dressing', 14.50, '/images/menu/33.jpg', 1, 12, 'gluten-free'),
 
-      (34, 8, 'Falafel Bowl', 'Falafel, hummus, salad, pickles, and tahini sauce', 12.50, '/images/main-course.svg', 1, 12, 'vegan'),
+      (34, 8, 'Falafel Bowl', 'Falafel, hummus, salad, pickles, and tahini sauce', 12.50, '/images/menu/34.jpg', 1, 12, 'vegan'),
 
-      (35, 8, 'Greek Salad Bowl', 'Feta, cucumber, tomato, olives, onion, and oregano dressing', 10.50, '/images/appetizers.svg', 1, 8, 'vegetarian,gluten-free'),
+      (35, 8, 'Greek Salad Bowl', 'Feta, cucumber, tomato, olives, onion, and oregano dressing', 10.50, '/images/menu/35.jpg', 1, 8, 'vegetarian,gluten-free'),
 
-      (36, 8, 'Vegan Power Bowl', 'Roasted vegetables, lentils, greens, and lemon dressing', 13.50, '/images/main-course.svg', 1, 12, 'vegan,gluten-free'),
+      (36, 8, 'Vegan Power Bowl', 'Roasted vegetables, lentils, greens, and lemon dressing', 13.50, '/images/menu/36.jpg', 1, 12, 'vegan,gluten-free'),
 
-      (37, 3, 'Mint Lemonade', 'Fresh lemon, mint, and crushed ice', 4.25, '/images/drinks.svg', 1, 4, 'vegan'),
+      (37, 3, 'Mint Lemonade', 'Fresh lemon, mint, and crushed ice', 4.25, '/images/menu/37.jpg', 1, 4, 'vegan'),
 
-      (38, 3, 'Turkish Coffee', 'Traditional strong coffee served in a small cup', 3.75, '/images/drinks.svg', 1, 5, 'vegan'),
+      (38, 3, 'Turkish Coffee', 'Traditional strong coffee served in a small cup', 3.75, '/images/menu/38.jpg', 1, 5, 'vegan'),
 
-      (39, 4, 'Baklava', 'Layered pastry with pistachio and syrup', 6.50, '/images/desserts.svg', 1, 4, 'vegetarian'),
+      (39, 4, 'Baklava', 'Layered pastry with pistachio and syrup', 6.50, '/images/menu/39.jpg', 1, 4, 'vegetarian'),
 
-      (40, 4, 'Fruit Plate', 'Seasonal sliced fruit', 6.00, '/images/desserts.svg', 1, 5, 'vegan,gluten-free')
+      (40, 4, 'Fruit Plate', 'Seasonal sliced fruit', 6.00, '/images/menu/40.jpg', 1, 5, 'vegan,gluten-free')
 
     `)
 
