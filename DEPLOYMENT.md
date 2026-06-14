@@ -44,14 +44,10 @@ Recommended free-tier combo: **Railway** for the backend + MySQL database, **Ver
 
 ### Initialize the database schema
 
-After the MySQL service is up, run the schema + migrations against it once. Easiest way: temporarily set your local `backend/.env` `DB_HOST`/`DB_PORT`/`DB_USER`/`DB_PASSWORD`/`DB_NAME`/`DB_SSL` to the Railway MySQL connection values (found in the MySQL service's **Connect** tab — use the public/proxy host+port), then from `backend/` run:
+After the MySQL service is up, run the schema against it once. Easiest way: temporarily set your local `backend/.env` `DB_HOST`/`DB_PORT`/`DB_USER`/`DB_PASSWORD`/`DB_NAME`/`DB_SSL` to the Railway MySQL connection values (found in the MySQL service's **Connect** tab — use the public/proxy host+port), then from `backend/` run:
 
 ```bash
 mysql -h <host> -P <port> -u <user> -p<password> <database> < database/schema.sql
-node database/migrate_v2.js
-node database/migrate_v3.js
-node database/migrate_v4.js
-node database/migrate_v5.js
 node database/seed.js
 ```
 

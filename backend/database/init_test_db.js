@@ -27,11 +27,6 @@ async function initTestDb() {
 
   await conn.query(schemaSql)
 
-  const { statements } = require('./migrate_v2')
-  for (const sql of statements) {
-    await conn.query(sql)
-  }
-
   const hash = await bcrypt.hash('SmartDine@2024', 10)
   await conn.query(
     `INSERT INTO users (name, email, password, role) VALUES

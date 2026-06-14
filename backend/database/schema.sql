@@ -1,6 +1,8 @@
 CREATE DATABASE IF NOT EXISTS smart_restaurant;
 USE smart_restaurant;
 
+DROP TABLE IF EXISTS blocked_ips;
+DROP TABLE IF EXISTS security_events;
 DROP TABLE IF EXISTS order_status_history;
 DROP TABLE IF EXISTS ratings;
 DROP TABLE IF EXISTS favorites;
@@ -299,4 +301,14 @@ CREATE TABLE security_events (
   INDEX idx_security_events_created (created_at),
   INDEX idx_security_events_ip (ip_address),
   INDEX idx_security_events_type (event_type)
+);
+
+CREATE TABLE blocked_ips (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  ip_address VARCHAR(45) NOT NULL UNIQUE,
+  reason VARCHAR(255),
+  blocked_by INT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (blocked_by) REFERENCES users(id) ON DELETE SET NULL,
+  INDEX idx_blocked_ips_ip (ip_address)
 );
