@@ -134,14 +134,14 @@ onUnmounted(() => {
 
 const getImageUrl = (url) => {
   if (!url) return ''
-  if (url.startsWith('http')) return '/images/main-course.svg'
+  if (url.startsWith('http')) return url
   if (url.startsWith('/images/')) return url
   const base = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '')
   return base + url
 }
 const hasRealPhoto = (item) => {
   const url = item.image_url
-  return !!url && !url.startsWith('http') && !url.startsWith('/images/')
+  return !!url && !url.startsWith('/images/')
 }
 
 const goToMenu = () => {

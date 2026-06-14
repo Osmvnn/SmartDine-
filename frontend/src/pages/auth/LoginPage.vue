@@ -1,11 +1,11 @@
 <template>
   <div class="login-page">
+    <RestaurantAmbientBg />
     <div class="login-container">
 
       <div class="login-card">
 
-        <div class="login-logo"><img :src="logoIcon" alt="Smart Dine" /></div>
-        <h3>Smart Dine</h3>
+        <div class="login-logo"><BrandLogo size="md" /></div>
         <p class="subtitle">Staff Login</p>
 
         <div class="form-group">
@@ -34,7 +34,8 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../store/auth'
-import logoIcon from '../../assets/logo-icon.svg'
+import BrandLogo from '../../components/BrandLogo.vue'
+import RestaurantAmbientBg from '../../components/RestaurantAmbientBg.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -73,12 +74,16 @@ const handleLogin = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  overflow: hidden;
 }
 
 .login-container {
   width: 100%;
   max-width: 420px;
   padding: 20px;
+  position: relative;
+  z-index: 1;
 }
 
 .login-card {
@@ -90,20 +95,9 @@ const handleLogin = async () => {
 }
 
 .login-logo {
-  width: 64px;
-  height: 64px;
-  border-radius: 18px;
-  display: inline-flex;
-  align-items: center;
+  display: flex;
   justify-content: center;
-  margin: 0 auto 12px;
-  overflow: hidden;
-}
-
-.login-logo img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  margin-bottom: 16px;
 }
 
 .subtitle {

@@ -1,6 +1,8 @@
 <template>
   <div class="auth-page customer-theme">
 
+    <RestaurantAmbientBg />
+
     <div class="auth-container">
 
       <div v-if="tableInfo" class="table-status-card" :class="statusClass">
@@ -44,8 +46,7 @@
 
       <div class="auth-card">
 
-        <div class="auth-logo"><img :src="logoIcon" alt="Smart Dine" /></div>
-        <h3>Smart Dine</h3>
+        <div class="auth-logo"><BrandLogo size="md" /></div>
         <p class="table-info" v-if="tableNum">Table #{{ tableNum }}</p>
         <p class="table-info reservation-mode" v-else><i class="bi bi-calendar-check me-1"></i>Reservation Mode</p>
         <p class="subtitle">{{ isLogin ? 'Welcome back!' : 'Create your account to start ordering' }}</p>
@@ -98,7 +99,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../../store/auth'
 import { useCartStore } from '../../store/cart'
-import logoIcon from '../../assets/logo-icon.svg'
+import BrandLogo from '../../components/BrandLogo.vue'
+import RestaurantAmbientBg from '../../components/RestaurantAmbientBg.vue'
 import api from '../../services/api'
 
 const router = useRouter()
@@ -209,19 +211,6 @@ const continueWithCurrentUser = () => {
   overflow: hidden;
 }
 
-.auth-page::before {
-  content: '';
-  position: absolute;
-  width: 500px;
-  height: 500px;
-  background: var(--primary);
-  border-radius: 50%;
-  filter: blur(150px);
-  opacity: 0.1;
-  top: -200px;
-  right: -100px;
-}
-
 .auth-container {
   width: 100%;
   max-width: 420px;
@@ -240,25 +229,9 @@ const continueWithCurrentUser = () => {
 }
 
 .auth-logo {
-  width: 64px;
-  height: 64px;
-  border-radius: 18px;
-  display: inline-flex;
-  align-items: center;
+  display: flex;
   justify-content: center;
-  margin: 0 auto 12px;
-  overflow: hidden;
-}
-
-.auth-logo img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.auth-card h3 {
-  font-weight: 700;
-  margin-bottom: 4px;
+  margin-bottom: 12px;
 }
 
 .table-info {

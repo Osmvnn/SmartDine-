@@ -1,15 +1,12 @@
 <template>
   <div class="welcome customer-theme">
 
-    <div class="bg-gradient"></div>
+    <RestaurantAmbientBg />
 
     <div class="welcome-content">
 
       <div class="logo-section">
-        <div class="logo-icon">
-          <img :src="logoIcon" alt="Smart Dine" />
-        </div>
-        <h1 class="brand">Smart Dine</h1>
+        <BrandLogo size="lg" />
         <p class="tagline">Smart Campus Dining Experience</p>
       </div>
 
@@ -110,7 +107,8 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../services/api'
-import logoIcon from '../assets/logo-icon.svg'
+import BrandLogo from '../components/BrandLogo.vue'
+import RestaurantAmbientBg from '../components/RestaurantAmbientBg.vue'
 
 const router = useRouter()
 const showTableSelect = ref(false)
@@ -151,16 +149,6 @@ onMounted(fetchTables)
   overflow: hidden;
 }
 
-.bg-gradient {
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(180deg, rgba(255, 247, 237, 0.08), transparent 38%),
-    radial-gradient(ellipse at 15% 5%, rgba(200, 121, 42, 0.16) 0%, transparent 48%),
-    radial-gradient(ellipse at 85% 75%, rgba(45, 143, 123, 0.12) 0%, transparent 46%);
-  pointer-events: none;
-}
-
 .welcome-content {
   text-align: center;
   width: min(1120px, 100%);
@@ -175,35 +163,11 @@ onMounted(fetchTables)
   animation: welcome-hero 0.5s ease 0.05s both;
 }
 
-.logo-icon {
-  width: 72px;
-  height: 72px;
-  border-radius: 20px;
-  display: inline-flex;
-  align-items: center;
+.logo-section :deep(.brand-logo) {
   justify-content: center;
-  margin-bottom: 16px;
-  overflow: hidden;
-  box-shadow: var(--shadow-md);
 }
 
-.logo-icon img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.brand {
-  font-size: clamp(2.4rem, 6vw, 4.5rem);
-  font-weight: 800;
-  letter-spacing: 0;
-  background: linear-gradient(135deg, #fff7ed, #f6c177 48%, #c8792a);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.tagline { color: var(--text-secondary); font-size: 15px; margin-top: 4px; }
+.tagline { color: var(--text-secondary); font-size: 15px; margin-top: 12px; }
 
 .message-box { margin-bottom: 34px; }
 .message-box h2 { font-size: 1.6rem; margin-bottom: 10px; font-weight: 700; }
@@ -461,7 +425,6 @@ onMounted(fetchTables)
 
 @media (max-width: 768px) {
   .steps-section { grid-template-columns: repeat(2, 1fr); }
-  .brand { font-size: 2rem; }
   .message-box h2 { font-size: 1.3rem; }
   .welcome-content { padding: 30px 16px; }
 }
