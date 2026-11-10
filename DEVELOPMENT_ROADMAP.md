@@ -22,9 +22,9 @@ Keep Vue 3, Pinia, Vite, Bootstrap, Express, PostgreSQL, and Socket.IO. MySQL re
 - Administrators and managers maintain menus, users, tables, inventory, promotions, shifts, and reports.
 - The backend uses routes, controllers, middleware, and a small services layer. Much business logic and SQL currently live inside controllers.
 - The frontend uses role-specific pages, a shared layout, Pinia stores, and a shared Axios client. Several pages combine substantial UI and workflow logic.
-- The database is initialized through SQL scripts rather than a versioned migration process.
+- The active Supabase database has versioned migrations under `supabase/migrations/`. The older MySQL setup still uses `backend/database/schema.sql`.
 
-Review baseline: the frontend production build and syntax checks for 45 backend JavaScript files passed. No automated test suite was found. Findings came from source inspection; live database and browser workflows still need validation.
+Verification as of 2026-11-10: 26 backend tests, the frontend production build, the Supabase API smoke test, migration parity, and tagged PostgreSQL workflow and concurrency checks passed. The user confirmed the local page loads. A full interactive role-by-role browser check and recovery testing are still needed.
 
 ## Working principles
 
@@ -53,7 +53,7 @@ smart_resturant/
     decisions/                # Short records of significant design decisions
   backend/
     database/
-      migrations/             # Ordered, tracked schema changes
+      migrations/             # Legacy MySQL target; Supabase migrations live at root
       seeds/                  # Explicit development/demo data
       schema.sql              # Fresh-install reference; not an upgrade mechanism
     src/
@@ -145,9 +145,9 @@ Completion criteria: documented access rules, passing tests for the protected bo
 
 ### 2.3 Enforce workflow consistency
 
-- [ ] Use row locking or conditional atomic updates to prevent overselling under simultaneous requests.
-- [ ] Aggregate stock demand across repeated lines for the same item, including different modifiers and rewards.
-- [ ] Prevent concurrent requests from opening multiple active sessions for the same table.
+- [x] Use row locking to prevent overselling during order creation under simultaneous requests.
+- [x] Aggregate stock demand across repeated lines for the same item, including different modifiers and rewards.
+- [x] Prevent concurrent requests from opening multiple active sessions for the same table.
 - [ ] Make order transitions concurrency-safe and record history within the same transaction.
 - [ ] Make cancellation atomic across status, stock, discounts, and loyalty adjustments.
 - [ ] Add idempotency to order submission and payment operations so retries do not create duplicates.
@@ -158,9 +158,9 @@ Completion criteria: documented access rules, passing tests for the protected bo
 
 ### 2.4 Introduce safe database changes
 
-- [ ] Add a migration runner and migration-history tracking.
-- [ ] Establish a baseline process for existing databases without recreating or erasing their tables.
-- [ ] Separate fresh-install setup, migrations, and demo seed commands.
+- [x] Track PostgreSQL changes with Supabase CLI migrations and migration history.
+- [x] Establish and verify a baseline for the existing Supabase database without recreating its tables.
+- [x] Separate the Supabase migration files from the explicit demo seed command.
 - [ ] Add constraints and indexes based on the access patterns and invariants established above.
 - [ ] Review historical menu-item snapshots so old orders and receipts remain accurate after menu edits.
 - [ ] Document backup, restore, deployment sequencing, and recovery for failed migrations.
@@ -289,11 +289,11 @@ Completion criteria: inventory movements are explainable, reports reconcile to p
 
 ## Suggested implementation batches
 
-1. Baseline documentation, isolated test setup, and public registration fix.
-2. Resource authorization, guest-session scope, and socket security.
-3. Shared validation, consistent errors, and core regression coverage.
-4. Migration baseline and safe database upgrade workflow.
-5. Order/payment service extraction with concurrency and idempotency fixes.
+1. Completed in part: baseline documentation, isolated test setup, and public registration fix.
+2. Completed in part: resource authorization and socket security; accountless guest sessions remain a product decision.
+3. In progress: shared validation, consistent errors, and core regression coverage.
+4. Completed for the hosted Supabase project: migration baseline and tracked schema changes. Fresh local replay and restore still need operational verification.
+5. In progress: order/payment services and concurrency. Persistent idempotency remains open.
 6. Checkout and staff component extraction, API handling, and lazy routes.
 7. Unified session billing and table lifecycle.
 8. Customer, waiter, cashier, kitchen, and reservation improvements.

@@ -12,7 +12,7 @@ The Vue app calls Express. Keep the database connection string and JWT secret in
 
 ## Database and backend
 
-The hosted database already has the schema in the [baseline migration](supabase/migrations/20261110125704_baseline.sql). Apply migrations in timestamp order on a new database. On an existing database, compare it with the baseline before marking that migration applied; do not reapply the baseline over populated tables. See [Supabase setup](supabase/README.md).
+The hosted database already has the schema in the [baseline migration](supabase/migrations/20261110125704_baseline.sql). The second migration prevents duplicate active table sessions. Apply migrations in timestamp order on a new database. On an existing database, compare it with the baseline before marking that migration applied; do not reapply the baseline over populated tables. See [Supabase setup](supabase/README.md).
 
 ```powershell
 cd backend
@@ -20,7 +20,7 @@ npm install
 Copy-Item .env.example .env
 ```
 
-Set `DB_PROVIDER=postgres`, `DATABASE_URL` to the Supabase session pooler URI, `DB_SSL=true`, `JWT_SECRET` to a long random value, `ALLOWED_ORIGINS` to the frontend origin, and `PORT=5000`. Set `DB_SSL_CA_FILE` to verify the server certificate when the project CA is available. Then run:
+Set `DB_PROVIDER=postgres`, `DATABASE_URL` to the Supabase session pooler URI, `DB_SSL=true`, `JWT_SECRET` to a long random value, `ALLOWED_ORIGINS` to the frontend origin, and `PORT=5000`. Set `DB_SSL_CA_FILE` to verify the server certificate when the project CA is available. Keep `ALLOW_DEMO_PAYMENTS=false` for normal use. Then run:
 
 ```powershell
 npm run db:check
@@ -53,6 +53,6 @@ node backend/scripts/verify-migrations.js
 node backend/scripts/verify-postgres-workflows.js
 ```
 
-The last two commands contact the configured PostgreSQL database. Migration verification rolls back its isolated schema. Workflow verification creates tagged test records and removes them; run it against a development database. `npm run db:smoke --prefix backend` provides a broader API smoke check.
+The last two commands contact the configured PostgreSQL database. Migration verification rolls back its isolated schema. Workflow verification creates tagged test records and removes them; run it against a development database. `npm run db:smoke --prefix backend` provides a broader API smoke check. The current backend test suite has 26 tests; it does not replace interactive browser checks.
 
 Online payments need a real provider. See [security and payment notes](docs/SECURITY_CHANGES.md) and the [development roadmap](DEVELOPMENT_ROADMAP.md).
