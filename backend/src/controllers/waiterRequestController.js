@@ -23,7 +23,7 @@ exports.createWaiterRequest = async (req, res) => {
 
     const [result] = await db.query(
 
-      'INSERT INTO waiter_requests (table_id, type, status, notes) VALUES (?, ?, "pending", ?)',
+      `INSERT INTO waiter_requests (table_id, type, status, notes) VALUES (?, ?, 'pending', ?)`,
 
       [table_id, type, notes || null]
 
@@ -160,7 +160,7 @@ exports.getWaiterOrders = async (req, res) => {
 
     }
 
-    query += ` ORDER BY FIELD(orders.status, 'ready', 'served'), orders.created_at ASC`
+    query += ` ORDER BY CASE orders.status WHEN 'ready' THEN 1 WHEN 'served' THEN 2 END, orders.created_at ASC`
 
     const [orders] = await db.query(query, params)
 

@@ -1,4 +1,5 @@
 const db = require('../config/db')
+const { dateText, daysBeforeToday } = require('../config/reportSql')
 
 const bcrypt = require('bcryptjs')
 
@@ -60,27 +61,27 @@ exports.getStats = async (req, res) => {
 
   try {
 
-    const [[{ totalUsers }]] = await db.query('SELECT COUNT(*) as totalUsers FROM users')
+    const [[{ totalUsers }]] = await db.query('SELECT COUNT(*) as "totalUsers" FROM users')
 
-    const [[{ totalTables }]] = await db.query('SELECT COUNT(*) as totalTables FROM restaurant_tables')
+    const [[{ totalTables }]] = await db.query('SELECT COUNT(*) as "totalTables" FROM restaurant_tables')
 
-    const [[{ totalItems }]] = await db.query('SELECT COUNT(*) as totalItems FROM menu_items')
+    const [[{ totalItems }]] = await db.query('SELECT COUNT(*) as "totalItems" FROM menu_items')
 
-    const [[{ totalOrders }]] = await db.query('SELECT COUNT(*) as totalOrders FROM orders')
+    const [[{ totalOrders }]] = await db.query('SELECT COUNT(*) as "totalOrders" FROM orders')
 
     const [[{ totalRevenue }]] = await db.query(
 
-      `SELECT COALESCE(SUM(total), 0) as totalRevenue FROM orders WHERE ${PAID_ORDER_FILTER}`
+      `SELECT COALESCE(SUM(total), 0) as "totalRevenue" FROM orders WHERE ${PAID_ORDER_FILTER}`
 
     )
 
     const [[{ pendingOrders }]] = await db.query(
 
-      'SELECT COUNT(*) as pendingOrders FROM orders WHERE status IN ("pending", "confirmed")'
+      `SELECT COUNT(*) as "pendingOrders" FROM orders WHERE status IN ('pending', 'confirmed')`
 
     )
 
-    const [[{ totalCategories }]] = await db.query('SELECT COUNT(*) as totalCategories FROM menu_categories')
+    const [[{ totalCategories }]] = await db.query('SELECT COUNT(*) as "totalCategories" FROM menu_categories')
 
     res.json({
 
@@ -607,7 +608,7 @@ exports.getWaiters = async (req, res) => {
 
     const [rows] = await db.query(
 
-      `SELECT id, name, email FROM users WHERE role = 'waiter' AND is_active = 1`
+      `SELECT id, name, email FROM users WHERE role = 'waiter' AND is_active = TRUE`
 
     )
 
@@ -647,7 +648,7 @@ exports.assignWaiter = async (req, res) => {
 
       const [waiterRows] = await db.query(
 
-        `SELECT id FROM users WHERE id = ? AND role = 'waiter' AND is_active = 1`,
+        `SELECT id FROM users WHERE id = ? AND role = 'waiter' AND is_active = TRUE`,
 
         [waiter_id]
 
@@ -783,7 +784,7 @@ exports.getOrdersHistory = async (req, res) => {
 
       SELECT
 
-        DATE_FORMAT(created_at, '%Y-%m-%d') as date,
+        ${dateText('created_at')} as date,
 
         COUNT(*) as order_count,
 
@@ -791,9 +792,9 @@ exports.getOrdersHistory = async (req, res) => {
 
       FROM orders
 
-      WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+      WHERE created_at >= ${daysBeforeToday}
 
-      GROUP BY DATE_FORMAT(created_at, '%Y-%m-%d')
+      GROUP BY ${dateText('created_at')}
 
       ORDER BY date DESC
 

@@ -14,7 +14,7 @@ router.post('/', optionalAuth, rc.createReservation)
 
 router.get('/my', auth, rc.getMyReservations)
 
-router.get('/', rc.getReservations)
+router.get('/', auth, authorize('admin', 'manager'), rc.getReservations)
 
 router.get('/available', rc.getAvailableTables)
 
@@ -22,4 +22,4 @@ router.put('/:id/status', auth, authorize('admin', 'manager'), auditLog('reserva
 
 router.delete('/:id', auth, authorize('admin', 'manager'), auditLog('reservation'), rc.deleteReservation)
 
-module.exports = router
+module.exports = router

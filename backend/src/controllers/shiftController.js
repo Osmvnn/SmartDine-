@@ -1,4 +1,5 @@
 const db = require('../config/db')
+const { dateText, daysBeforeToday, elapsedMinutes } = require('../config/reportSql')
 
 exports.clockIn = async (req, res) => {
 
@@ -116,23 +117,23 @@ exports.getShiftsHistory = async (req, res) => {
 
       SELECT
 
-        DATE_FORMAT(shifts.clock_in, '%Y-%m-%d') as date,
+        ${dateText('shifts.clock_in')} as date,
 
         COUNT(*) as shift_count,
 
         COUNT(DISTINCT shifts.user_id) as staff_count,
 
-        COALESCE(SUM(TIMESTAMPDIFF(MINUTE, shifts.clock_in, COALESCE(shifts.clock_out, NOW()))), 0) as total_minutes
+        COALESCE(SUM(${elapsedMinutes('shifts.clock_in', 'COALESCE(shifts.clock_out, NOW())')}), 0) as total_minutes
 
       FROM shifts
 
       LEFT JOIN users ON shifts.user_id = users.id
 
-      WHERE shifts.clock_in >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+      WHERE shifts.clock_in >= ${daysBeforeToday}
 
       AND users.role != 'customer'
 
-      GROUP BY DATE_FORMAT(shifts.clock_in, '%Y-%m-%d')
+      GROUP BY ${dateText('shifts.clock_in')}
 
       ORDER BY date DESC
 

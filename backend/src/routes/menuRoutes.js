@@ -10,8 +10,14 @@ router.get('/items', menuController.getItems)
 
 router.get('/grouped', menuController.getGroupedMenu)
 
-router.get('/favorites', menuController.getFavorites)
+const { auth } = require('../middleware/auth')
+const { customerTableAccess } = require('../middleware/customerAccess')
+const favoriteAccess = (req, res, next) => {
+  req.body = { ...(req.body || {}), table_id: req.method === 'GET' ? req.query.session_id : req.body.session_id }
+  return customerTableAccess(req, res, next)
+}
+router.get('/favorites', auth, favoriteAccess, menuController.getFavorites)
 
-router.post('/favorites', menuController.toggleFavorite)
+router.post('/favorites', auth, favoriteAccess, menuController.toggleFavorite)
 
-module.exports = router
+module.exports = router

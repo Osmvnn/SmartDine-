@@ -6,7 +6,12 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node src/server.js",
-    "seed": "node database/seed.js"
+    "seed": "node database/seed-postgres.js",
+    "seed:mysql": "node database/seed.js",
+    "db:check": "node scripts/check-postgres.js",
+    "db:smoke": "node scripts/smoke-postgres.js",
+    "db:seed": "node database/seed-postgres.js",
+    "test": "node --test tests/*.test.js"
   },
   "keywords": [],
   "author": "",
@@ -23,6 +28,7 @@
     "multer": "^2.1.1",
     "mysql2": "^3.20.0",
     "pdfkit": "^0.18.0",
+    "pg": "^8.23.1",
     "socket.io": "^4.8.3",
     "web-push": "^3.6.7"
   }

@@ -14,13 +14,15 @@ export const useSocketStore = defineStore('socket', {
 
       this.socket = io(
         (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api$/, ''),
-        { transports: ['websocket', 'polling'] }
+        { transports: ['websocket', 'polling'], auth: cb => cb({ token: sessionStorage.getItem('token') }) }
       )
 
       this.socket.on('connect', () => {
         this.connected = true
         this.rooms.forEach(room => this.socket.emit('join', room))
       })
+
+      this.socket.on('connect_error', () => { this.connected = false })
 
       this.socket.on('disconnect', () => {
         this.connected = false

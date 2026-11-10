@@ -12,6 +12,10 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
+  try {
+    const cart = JSON.parse(localStorage.getItem('smart_restaurant_cart') || 'null')
+    if (cart?.qrToken) config.headers['X-Table-Token'] = cart.qrToken
+  } catch { /* Ignore invalid saved carts. */ }
   return config
 })
 

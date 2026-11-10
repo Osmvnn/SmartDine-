@@ -3,264 +3,20 @@ const { emitOrderStatus, transitionOrderStatus } = require('../services/orderWor
 
 const REFUND_REASONS = ['customer_complaint', 'order_cancelled', 'duplicate_charge', 'food_quality_issue', 'incorrect_order', 'other']
 
+const { configurePayment } = require('../services/configurePayment')
+const { demoPaymentsEnabled } = require('../services/paymentPolicy')
+exports.getCapabilities = (req, res) => res.json({ success: true, data: { online: demoPaymentsEnabled(), demo: demoPaymentsEnabled() } })
 exports.processPayment = async (req, res) => {
-
   try {
-
-    const { order_id, method, split_type, payer_name, payment_timing, status, tip } = req.body
-
-    if (!order_id) {
-
-      return res.status(400).json({ success: false, message: 'order_id is required' })
-
-    }
-
-    const [orders] = await db.query('SELECT * FROM orders WHERE id = ?', [order_id])
-
-    if (!orders.length) {
-
-      return res.status(404).json({ success: false, message: 'Order not found' })
-
-    }
-
-    const order = orders[0]
-    const isNoChargeOrder = Number(order.total || 0) <= 0
-    const timing = isNoChargeOrder ? 'pre' : (payment_timing || 'pre')
-    const tipAmount = !isNoChargeOrder && timing === 'pre' ? Math.max(0, Number(tip || 0)) : 0
-    let payerName = payer_name || null
-
-    if (!payerName && order.customer_id) {
-      const [users] = await db.query('SELECT name FROM users WHERE id = ? LIMIT 1', [order.customer_id])
-      payerName = users[0]?.name || null
-    }
-
-    if (['cancelled', 'completed'].includes(order.status)) {
-
-      return res.status(400).json({ success: false, message: `Cannot process payment for a ${order.status} order` })
-
-    }
-
-    if (timing === 'pre') {
-      const [existingPayment] = await db.query(
-
-        'SELECT * FROM payments WHERE order_id = ? AND status = "paid"', [order_id]
-
-      )
-
-      if (existingPayment.length) {
-
-        return res.status(400).json({ success: false, message: 'Order is already paid' })
-
-      }
-    }
-
-    const transactionId = 'TXN_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8).toUpperCase()
-
-    const [existing] = await db.query('SELECT id FROM payments WHERE order_id = ?', [order_id])
-
-    const finalStatus = timing === 'pre' ? (status || 'paid') : 'pending'
-    const paymentAmount = Math.round((Number(order.total) + tipAmount) * 100) / 100
-
-    if (existing.length) {
-
-      await db.query(
-
-        'UPDATE payments SET amount = ?, status = ?, method = ?, transaction_id = ?, split_type = ?, payer_name = ?, payment_timing = ?, tip_amount = ? WHERE order_id = ?',
-
-        [paymentAmount, finalStatus, method || 'card', transactionId, split_type || 'full', payerName, timing, tipAmount, order_id]
-
-      )
-
-    } else {
-
-      await db.query(
-
-        'INSERT INTO payments (order_id, amount, method, status, transaction_id, split_type, payer_name, payment_timing, tip_amount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-
-        [order_id, paymentAmount, method || 'card', finalStatus, transactionId, split_type || 'full', payerName, timing, tipAmount]
-
-      )
-
-    }
-
-    if (timing === 'pre') {
-      if (order.status === 'pending') {
-
-        await transitionOrderStatus(order_id, 'confirmed', { role: 'admin' })
-
-      }
-
-      try {
-
-        const { getIO } = require('../socket')
-
-        const io = getIO()
-
-        if (io) {
-
-          io.to('kitchen').emit('order-paid', { order_id, table_number: null })
-
-        }
-
-      } catch { }
-    } else {
-      if (order.status === 'pending') {
-
-        await transitionOrderStatus(order_id, 'confirmed', { role: 'admin' })
-
-      }
-
-      try {
-
-        const { getIO } = require('../socket')
-
-        const io = getIO()
-
-        if (io) {
-
-          io.to('kitchen').emit('order-paid', { order_id, table_number: null })
-
-          io.to('cashier').emit('pending-payment', { order_id, method, table_id: order.table_id })
-
-          io.to('waiter').emit('pending-payment', { order_id, method, table_id: order.table_id })
-
-        }
-
-      } catch { }
-    }
-
-    res.json({
-
-      success: true,
-
-      message: 'Payment processed successfully',
-
-      data: { transaction_id: transactionId, status: finalStatus, amount: paymentAmount, tip: tipAmount }
-
-    })
-
-  } catch (error) {
-
-    res.status(500).json({ success: false, message: error.message })
-
-  }
-
+    const result = await configurePayment(req.body.order_id, req.body)
+    res.json({ success: true, data: { ...result.transactions[0], demo: result.demo } })
+  } catch (error) { res.status(error.statusCode || 500).json({ success: false, message: error.statusCode ? error.message : 'Unable to arrange payment' }) }
 }
-
 exports.splitPayment = async (req, res) => {
-
   try {
-
-    const { order_id, splits } = req.body
-
-    if (!order_id || !splits || !Array.isArray(splits) || splits.length === 0) {
-
-      return res.status(400).json({ success: false, message: 'order_id and splits array are required' })
-
-    }
-
-    const [orders] = await db.query('SELECT * FROM orders WHERE id = ?', [order_id])
-
-    if (!orders.length) {
-
-      return res.status(404).json({ success: false, message: 'Order not found' })
-
-    }
-
-    const order = orders[0]
-
-    if (['cancelled', 'completed'].includes(order.status)) {
-
-      return res.status(400).json({ success: false, message: `Cannot split payment for a ${order.status} order` })
-
-    }
-
-    const totalSplit = splits.reduce((sum, s) => sum + Number(s.amount), 0)
-    const totalTip = splits.reduce((sum, s) => sum + Math.max(0, Number(s.tip || 0)), 0)
-    const expectedTotal = Math.round((Number(order.total) + totalTip) * 100) / 100
-
-    if (Math.abs(totalSplit - expectedTotal) > 0.01) {
-
-      return res.status(400).json({
-
-        success: false,
-
-        message: `Split amounts ($${totalSplit.toFixed(2)}) must equal order total ($${expectedTotal.toFixed(2)})`
-
-      })
-
-    }
-
-    await db.query('DELETE FROM payments WHERE order_id = ? AND status = "pending"', [order_id])
-
-    const transactions = []
-
-    for (const split of splits) {
-
-      const timing = split.payment_timing === 'post' ? 'post' : 'pre'
-
-      const status = timing === 'post' ? 'pending' : 'paid'
-
-      const txnId = 'TXN_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8).toUpperCase()
-      const splitTip = Math.max(0, Number(split.tip || 0))
-
-      await db.query(
-
-        'INSERT INTO payments (order_id, amount, method, status, transaction_id, split_type, payer_name, payment_timing, tip_amount) VALUES (?, ?, ?, ?, ?, "custom", ?, ?, ?)',
-
-        [order_id, split.amount, split.method || 'card', status, txnId, split.payer_name || null, timing, splitTip]
-
-      )
-
-      transactions.push({
-        payer: split.payer_name,
-        amount: split.amount,
-        method: split.method || 'card',
-        payment_timing: timing,
-        status,
-        transaction_id: txnId
-      })
-
-    }
-
-    if (order.status === 'pending') {
-
-      await transitionOrderStatus(order_id, 'confirmed', { role: 'admin' })
-
-    }
-
-    try {
-
-      const { getIO } = require('../socket')
-
-      const io = getIO()
-
-      if (io) {
-
-        io.to('kitchen').emit('order-paid', { order_id })
-
-        const pendingSplits = transactions.filter(t => t.status === 'pending')
-
-        if (pendingSplits.length) {
-
-          io.to('cashier').emit('pending-payment', { order_id, table_id: order.table_id, splits: pendingSplits })
-
-          io.to('waiter').emit('pending-payment', { order_id, table_id: order.table_id, splits: pendingSplits })
-
-        }
-
-      }
-
-    } catch { }
-
-    res.json({ success: true, message: 'Split payment processed', data: { transactions } })
-
-  } catch (error) {
-
-    res.status(500).json({ success: false, message: error.message })
-
-  }
-
+    const result = await configurePayment(req.body.order_id, req.body, true)
+    res.json({ success: true, data: result })
+  } catch (error) { res.status(error.statusCode || 500).json({ success: false, message: error.statusCode ? error.message : 'Unable to arrange split payment' }) }
 }
 
 exports.getPaymentByOrder = async (req, res) => {
@@ -350,7 +106,7 @@ exports.getPendingPayments = async (req, res) => {
       payment.items = items
 
       const [paidSplits] = await db.query(
-        'SELECT payer_name, amount, method, payment_timing FROM payments WHERE order_id = ? AND status = "paid"',
+        `SELECT payer_name, amount, method, payment_timing FROM payments WHERE order_id = ? AND status = 'paid'`,
         [payment.order_id]
       )
 
@@ -369,122 +125,10 @@ exports.getPendingPayments = async (req, res) => {
 }
 
 exports.confirmCashPayment = async (req, res) => {
-
   try {
-
-    const { payment_id } = req.params
-
-    const userId = req.user ? req.user.id : null
-    const role = req.user?.role
-
-    const [payments] = await db.query(
-
-      'SELECT * FROM payments WHERE id = ? LIMIT 1',
-
-      [payment_id]
-
-    )
-
-    if (!payments.length) {
-
-      return res.status(404).json({ success: false, message: 'Payment not found' })
-
-    }
-
-    const payment = payments[0]
-
-    const [orders] = await db.query(
-
-      'SELECT * FROM orders WHERE id = ? LIMIT 1',
-
-      [payment.order_id]
-
-    )
-
-    if (!orders.length) {
-
-      return res.status(404).json({ success: false, message: 'Order not found' })
-
-    }
-
-    const order = orders[0]
-
-    if (order.status === 'cancelled') {
-
-      return res.status(400).json({ success: false, message: 'Cannot confirm payment for a cancelled order' })
-
-    }
-    if (role === 'waiter') {
-
-      if (payment.waiter_confirmed_by) {
-        return res.status(400).json({ success: false, message: 'Already confirmed, awaiting cashier verification' })
-      }
-
-      await db.query(
-        'UPDATE payments SET waiter_confirmed_by = ?, waiter_confirmed_at = NOW() WHERE id = ?',
-        [userId, payment_id]
-      )
-
-      try {
-
-        const { getIO } = require('../socket')
-
-        const io = getIO()
-
-        if (io) {
-
-          io.to('cashier').emit('payment-confirmed', { order_id: payment.order_id, payment_id, method: payment.method, stage: 'waiter' })
-
-        }
-
-      } catch { }
-
-      return res.json({ success: true, message: 'Payment marked as collected. Awaiting cashier verification.' })
-    }
-    await db.query(
-
-      'UPDATE payments SET status = "paid", cashier_confirmed = 1, confirmed_by = ?, confirmed_at = NOW() WHERE id = ?',
-
-      [userId, payment_id]
-
-    )
-
-    if (order.status === 'pending') {
-
-      await transitionOrderStatus(payment.order_id, 'confirmed', { role: role || 'cashier' })
-
-    } else if (order.status === 'served') {
-
-      await transitionOrderStatus(payment.order_id, 'completed', { role: role || 'cashier' })
-
-    } else if (order.status === 'completed') {
-
-      emitOrderStatus(payment.order_id, 'completed')
-
-    }
-
-    try {
-
-      const { getIO } = require('../socket')
-
-      const io = getIO()
-
-      if (io) {
-
-        io.emit('payment-confirmed', { order_id: payment.order_id, payment_id, method: payment.method })
-
-      }
-
-    } catch { }
-
-    res.json({ success: true, message: 'Payment confirmed successfully' })
-
-  } catch (error) {
-
-    res.status(error.statusCode || 500).json({ success: false, message: error.message })
-
-  }
-
+    await require('../services/settlePayment').settlePayment(req.params.payment_id, req.accessibleOrder.id, req.user)
+    res.json({ success: true, message: req.user.role === 'waiter' ? 'Collection recorded; awaiting cashier verification' : 'Payment confirmed' })
+  } catch (error) { res.status(error.statusCode || 500).json({ success: false, message: error.statusCode ? error.message : 'Unable to confirm payment' }) }
 }
 
 exports.getRecentPayments = async (req, res) => {
@@ -566,76 +210,21 @@ exports.getRecentPayments = async (req, res) => {
 }
 
 exports.refundPayment = async (req, res) => {
-
   try {
-
-    const { payment_id } = req.params
-
     const { reason, notes } = req.body
-
-    const userId = req.user.id
-
-    if (!reason || !REFUND_REASONS.includes(reason)) {
-
-      return res.status(400).json({ success: false, message: 'A valid refund reason is required' })
-
-    }
-
-    const [payments] = await db.query('SELECT * FROM payments WHERE id = ?', [payment_id])
-
-    if (!payments.length) {
-
-      return res.status(404).json({ success: false, message: 'Payment not found' })
-
-    }
-
-    const payment = payments[0]
-
-    if (payment.status !== 'paid') {
-
-      return res.status(400).json({ success: false, message: `Cannot refund a payment with status "${payment.status}"` })
-
-    }
-
-    const fullReason = (notes ? `${reason}: ${notes}` : reason).slice(0, 255)
-
-    await db.query(
-
-      'UPDATE payments SET status = "refunded", refund_reason = ?, refunded_by = ?, refunded_at = NOW() WHERE id = ?',
-
-      [fullReason, userId, payment_id]
-
-    )
-
-    try {
-
-      const { getIO } = require('../socket')
-
-      const io = getIO()
-
-      if (io) {
-
-        io.emit('payment-refunded', { order_id: payment.order_id, payment_id: Number(payment_id) })
-
-      }
-
-    } catch { }
-
-    res.json({ success: true, message: 'Payment refunded successfully' })
-
-  } catch (error) {
-
-    res.status(500).json({ success: false, message: error.message })
-
-  }
-
+    if (!REFUND_REASONS.includes(reason)) return res.status(400).json({ success: false, message: 'A valid refund reason is required' })
+    const fullReason = (notes ? reason + ': ' + String(notes) : reason).slice(0, 255)
+    await require('../services/settlePayment').recordRefund(req.params.payment_id, req.accessibleOrder.id, req.user.id, fullReason)
+    res.json({ success: true, message: 'Refund recorded; this does not transfer money' })
+  } catch (error) { res.status(error.statusCode || 500).json({ success: false, message: error.statusCode ? error.message : 'Unable to record refund' }) }
 }
 
 exports.notifyCashPayment = async (req, res) => {
 
   try {
 
-    const { order_id, table_id, method } = req.body
+    const { order_id, method } = req.body
+    const table_id = req.accessibleOrder.table_id
 
     const [orders] = await db.query('SELECT * FROM orders WHERE id = ?', [order_id])
 

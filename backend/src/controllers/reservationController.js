@@ -1,4 +1,5 @@
 const db = require('../config/db')
+const { timeDifferenceMinutes } = require('../config/reportSql')
 
 exports.createReservation = async (req, res) => {
 
@@ -16,11 +17,11 @@ exports.createReservation = async (req, res) => {
 
       const [conflicts] = await db.query(
 
-        `SELECT id FROM reservations 
+        `SELECT id FROM reservations
 
          WHERE table_id = ? AND reservation_date = ? AND status IN ('pending', 'confirmed')
 
-         AND ABS(TIMESTAMPDIFF(MINUTE, reservation_time, ?)) < 120`,
+         AND ${timeDifferenceMinutes('reservation_time')} < 120`,
 
         [table_id, reservation_date, reservation_time]
 
@@ -263,19 +264,19 @@ exports.getAvailableTables = async (req, res) => {
 
     let query = `
 
-      SELECT * FROM restaurant_tables 
+      SELECT * FROM restaurant_tables
 
       WHERE id NOT IN (
 
-        SELECT table_id FROM reservations 
+        SELECT table_id FROM reservations
 
-        WHERE table_id IS NOT NULL 
+        WHERE table_id IS NOT NULL
 
-        AND reservation_date = ? 
+        AND reservation_date = ?
 
         AND status IN ('pending', 'confirmed')
 
-        AND ABS(TIMESTAMPDIFF(MINUTE, reservation_time, ?)) < 120
+        AND ${timeDifferenceMinutes('reservation_time')} < 120
 
       )
 

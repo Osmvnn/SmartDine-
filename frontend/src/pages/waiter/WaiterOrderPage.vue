@@ -114,11 +114,12 @@
 
         <div class="option-block">
           <label class="option-label">When to Pay?</label>
+          <p v-if="demoPayments">Demo mode: no money is charged.</p>
           <div class="payment-timing-grid">
-            <div :class="['timing-card', paymentTiming === 'pre' ? 'active' : '']" @click="paymentTiming = 'pre'">
+            <div v-if="onlinePayments" :class="['timing-card', paymentTiming === 'pre' ? 'active' : '']" @click="paymentTiming = 'pre'">
               <i class="bi bi-lightning-charge-fill timing-icon"></i>
-              <span>Pay Now</span>
-              <small>Collect before sending to kitchen</small>
+              <span>Demo Payment</span>
+              <small>Simulation only; no money is charged</small>
             </div>
             <div :class="['timing-card', paymentTiming === 'post' ? 'active' : '']" @click="paymentTiming = 'post'">
               <i class="bi bi-clock-history timing-icon"></i>
@@ -190,6 +191,8 @@
 </template>
 
 <script setup>
+import { usePaymentCapabilities } from '../../composables/usePaymentCapabilities'
+const { onlinePayments, demoPayments } = usePaymentCapabilities()
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../../services/api'
@@ -370,7 +373,7 @@ const submitOrder = async () => {
         order_id: orderId,
         method: paymentMethod.value,
         payment_timing: paymentTiming.value,
-        status: paymentTiming.value === 'pre' ? 'paid' : 'pending',
+
         payer_name: 'Table guest'
       })
     }

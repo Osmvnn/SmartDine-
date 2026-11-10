@@ -18,13 +18,13 @@ const ROLE_ALLOWED_TARGETS = {
   cashier: ['completed']
 }
 
-function emitOrderStatus(orderId, status) {
+async function emitOrderStatus(orderId, status) {
   try {
     const { getIO } = require('../socket')
     const io = getIO()
     if (!io) return
 
-    io.emit('order-status-changed', { order_id: Number(orderId), status })
+    await require('../socket').emitOrderEvent(orderId, 'order-status-changed', { order_id: Number(orderId), status })
 
     if (status === 'ready') {
       io.to('waiter').emit('order-ready', { order_id: Number(orderId) })
@@ -33,6 +33,9 @@ function emitOrderStatus(orderId, status) {
 }
 
 async function transitionOrderStatus(orderId, nextStatus, options = {}) {
+  if (nextStatus === 'cancelled' || (nextStatus === 'confirmed' && !options.connection)) {
+    throw Object.assign(new Error('Use the cancellation or payment endpoint for this transition'), { statusCode: 409 })
+  }
   const connection = options.connection || db
   const role = options.role || 'admin'
   const roleTargets = ROLE_ALLOWED_TARGETS[role] || []
@@ -50,7 +53,7 @@ async function transitionOrderStatus(orderId, nextStatus, options = {}) {
   }
 
   const [orders] = await connection.query(
-    'SELECT id, status, table_id, session_id FROM orders WHERE id = ? LIMIT 1',
+    'SELECT id, status, table_id, session_id, customer_id, total FROM orders WHERE id = ? LIMIT 1',
     [orderId]
   )
 
@@ -61,6 +64,13 @@ async function transitionOrderStatus(orderId, nextStatus, options = {}) {
   }
 
   const order = orders[0]
+  if (nextStatus === 'completed') {
+    const [[balance]] = await connection.query(
+      "SELECT COALESCE(SUM(CASE WHEN status = 'paid' THEN amount - tip_amount ELSE 0 END), 0) AS paid, SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending FROM payments WHERE order_id = ?", [orderId])
+    if (Number(balance.pending) > 0 || Math.round(Number(balance.paid) * 100) < Math.round(Number(order.total) * 100)) {
+      throw Object.assign(new Error('Outstanding payments must be settled before completion'), { statusCode: 409 })
+    }
+  }
   const allowedNext = ALLOWED_TRANSITIONS[order.status] || []
 
   if (!allowedNext.includes(nextStatus)) {
@@ -78,14 +88,16 @@ async function transitionOrderStatus(orderId, nextStatus, options = {}) {
 
   if (nextStatus === 'confirmed') {
     const [[{ maxPrep }]] = await connection.query(
-      `SELECT COALESCE(MAX(mi.prep_time_minutes), 15) as maxPrep
+      `SELECT COALESCE(MAX(mi.prep_time_minutes), 15) as "maxPrep"
        FROM order_items oi
        JOIN menu_items mi ON oi.menu_item_id = mi.id
        WHERE oi.order_id = ?`,
       [orderId]
     )
     await connection.query(
-      'UPDATE orders SET estimated_ready_at = DATE_ADD(NOW(), INTERVAL ? MINUTE) WHERE id = ?',
+      process.env.DB_PROVIDER === 'postgres'
+        ? "UPDATE orders SET estimated_ready_at = NOW() + (? * INTERVAL '1 minute') WHERE id = ?"
+        : 'UPDATE orders SET estimated_ready_at = DATE_ADD(NOW(), INTERVAL ? MINUTE) WHERE id = ?',
       [maxPrep, orderId]
     )
   }
@@ -112,11 +124,11 @@ async function transitionOrderStatus(orderId, nextStatus, options = {}) {
   }
 
   if (options.emit !== false) {
-    emitOrderStatus(orderId, nextStatus)
+    await emitOrderStatus(orderId, nextStatus)
   }
 
   if (nextStatus === 'ready') {
-    require('./pushService').notifySession(order.session_id, {
+    require('./pushService').notifyUser(order.customer_id, {
       title: 'Order Ready',
       body: `Your order #${orderId} is ready to be served.`,
       tag: `order-${orderId}`,
@@ -185,7 +197,7 @@ async function transitionOrderItemStatus(orderId, itemId, nextStatus, options = 
     const { getIO } = require('../socket')
     const io = getIO()
     if (io) {
-      io.emit('order-item-status-changed', { order_id: Number(orderId), item_id: Number(itemId), status: nextStatus })
+      await require('../socket').emitOrderEvent(orderId, 'order-item-status-changed', { order_id: Number(orderId), item_id: Number(itemId), status: nextStatus })
     }
   } catch { }
   const [orders] = await connection.query('SELECT status FROM orders WHERE id = ? LIMIT 1', [orderId])

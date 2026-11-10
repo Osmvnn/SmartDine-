@@ -51,6 +51,7 @@ const routes = [
   {
     path: '/customer',
     component: MainLayout,
+    meta: { requiresAuth: true },
     children: [
       { path: '', redirect: '/customer/orders' },
       { path: 'menu/:qrToken', component: MenuPage },
@@ -153,7 +154,9 @@ router.beforeEach((to) => {
   const user = JSON.parse(sessionStorage.getItem('user') || 'null')
 
   if (!token || !user) {
-    return '/login'
+    return to.path.startsWith('/customer')
+      ? { path: '/customer/login', query: to.params.qrToken ? { table: to.params.qrToken } : {} }
+      : '/login'
   }
 
   const requiredRole = to.matched.find(r => r.meta.role)?.meta.role

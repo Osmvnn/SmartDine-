@@ -1,4 +1,5 @@
 const db = require('../config/db')
+const { dateText, daysBeforeToday, sevenDaysBeforeToday, hourOf, dayOfWeek: dayOfWeekNumber, textValue } = require('../config/reportSql')
 
 const PDFDocument = require('pdfkit')
 
@@ -16,43 +17,43 @@ exports.getDashboard = async (req, res) => {
 
     const [[{ todayOrders }]] = await db.query(
 
-      'SELECT COUNT(*) as todayOrders FROM orders WHERE DATE(created_at) = CURDATE()'
+      'SELECT COUNT(*) as "todayOrders" FROM orders WHERE DATE(created_at) = CURRENT_DATE'
 
     )
 
     const [[{ todayRevenue }]] = await db.query(
 
-      `SELECT COALESCE(SUM(total), 0) as todayRevenue FROM orders WHERE DATE(created_at) = CURDATE() AND ${PAID_ORDER_FILTER}`
+      `SELECT COALESCE(SUM(total), 0) as "todayRevenue" FROM orders WHERE DATE(created_at) = CURRENT_DATE AND ${PAID_ORDER_FILTER}`
 
     )
 
     const [[{ activeTables }]] = await db.query(
 
-      'SELECT COUNT(*) as activeTables FROM restaurant_tables WHERE status = "occupied"'
+      `SELECT COUNT(*) as "activeTables" FROM restaurant_tables WHERE status = 'occupied'`
 
     )
 
     const [[{ totalTables }]] = await db.query(
 
-      'SELECT COUNT(*) as totalTables FROM restaurant_tables'
+      'SELECT COUNT(*) as "totalTables" FROM restaurant_tables'
 
     )
 
     const [[{ pendingOrders }]] = await db.query(
 
-      'SELECT COUNT(*) as pendingOrders FROM orders WHERE status IN ("pending", "confirmed", "preparing")'
+      `SELECT COUNT(*) as "pendingOrders" FROM orders WHERE status IN ('pending', 'confirmed', 'preparing')`
 
     )
 
     const [[{ completedToday }]] = await db.query(
 
-      'SELECT COUNT(*) as completedToday FROM orders WHERE DATE(created_at) = CURDATE() AND status = "completed"'
+      `SELECT COUNT(*) as "completedToday" FROM orders WHERE DATE(created_at) = CURRENT_DATE AND status = 'completed'`
 
     )
 
     const [[{ avgOrderValue }]] = await db.query(
 
-      `SELECT COALESCE(AVG(total), 0) as avgOrderValue FROM orders WHERE ${PAID_ORDER_FILTER}`
+      `SELECT COALESCE(AVG(total), 0) as "avgOrderValue" FROM orders WHERE ${PAID_ORDER_FILTER}`
 
     )
 
@@ -106,7 +107,7 @@ exports.getSales = async (req, res) => {
 
     const endDate = req.query.end_date || null
 
-    let dateFilter = `created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)`
+    let dateFilter = `created_at >= ${sevenDaysBeforeToday}`
 
     const dateParams = []
 
@@ -206,7 +207,7 @@ exports.getSales = async (req, res) => {
 
       SELECT
 
-        HOUR(created_at) as hour,
+        ${hourOf('created_at')} as hour,
 
         COUNT(*) as orders,
 
@@ -218,7 +219,7 @@ exports.getSales = async (req, res) => {
 
         AND ${PAID_ORDER_FILTER}
 
-      GROUP BY HOUR(created_at)
+      GROUP BY ${hourOf('created_at')}
 
     `, dateParams)
 
@@ -238,7 +239,7 @@ exports.getSales = async (req, res) => {
 
       SELECT
 
-        DAYOFWEEK(created_at) as dow,
+        ${dayOfWeekNumber('created_at')} as dow,
 
         COUNT(*) as orders,
 
@@ -250,7 +251,7 @@ exports.getSales = async (req, res) => {
 
         AND ${PAID_ORDER_FILTER}
 
-      GROUP BY DAYOFWEEK(created_at)
+      GROUP BY ${dayOfWeekNumber('created_at')}
 
     `, dateParams)
 
@@ -292,7 +293,7 @@ exports.getTipReport = async (req, res) => {
 
     const endDate = req.query.end_date || null
 
-    let dateFilter = `p.created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)`
+    let dateFilter = `p.created_at >= ${sevenDaysBeforeToday}`
 
     const dateParams = []
 
@@ -324,7 +325,7 @@ exports.getTipReport = async (req, res) => {
 
         COALESCE(u.name, rt_waiter.name, 'Unassigned') as staff_name,
 
-        COALESCE(u.role, rt_waiter.role, '-') as staff_role,
+        COALESCE(${textValue('u.role')}, ${textValue('rt_waiter.role')}, '-') as staff_role,
 
         COUNT(*) as tip_count,
 
@@ -350,7 +351,7 @@ exports.getTipReport = async (req, res) => {
 
     const [[{ totalTips }]] = await db.query(`
 
-      SELECT COALESCE(SUM(p.tip_amount), 0) as totalTips
+      SELECT COALESCE(SUM(p.tip_amount), 0) as "totalTips"
 
       FROM payments p
 
@@ -389,7 +390,7 @@ exports.getStaffPerformance = async (req, res) => {
       if (startDate && endDate) return { sql: `DATE(${column}) BETWEEN ? AND ?`, params: [startDate, endDate] }
       if (startDate) return { sql: `DATE(${column}) >= ?`, params: [startDate] }
       if (endDate) return { sql: `DATE(${column}) <= ?`, params: [endDate] }
-      return { sql: `${column} >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)`, params: [] }
+      return { sql: `${column} >= ${sevenDaysBeforeToday}`, params: [] }
     }
 
     const orderFilter = buildFilter('o.created_at')
@@ -455,7 +456,7 @@ exports.getTableStats = async (req, res) => {
 
     const date = req.query.date || null
 
-    const dateCondition = date ? 'DATE(orders.created_at) = ?' : 'DATE(orders.created_at) = CURDATE()'
+    const dateCondition = date ? 'DATE(orders.created_at) = ?' : 'DATE(orders.created_at) = CURRENT_DATE'
 
     const dateParams = date ? [date] : []
 
@@ -481,17 +482,17 @@ exports.getTableStats = async (req, res) => {
 
     const [[{ occupiedCount }]] = await db.query(
 
-      'SELECT COUNT(*) as occupiedCount FROM restaurant_tables WHERE status = "occupied"'
+      `SELECT COUNT(*) as "occupiedCount" FROM restaurant_tables WHERE status = 'occupied'`
 
     )
 
     const [[{ totalCount }]] = await db.query(
 
-      'SELECT COUNT(*) as totalCount FROM restaurant_tables'
+      'SELECT COUNT(*) as "totalCount" FROM restaurant_tables'
 
     )
 
-    const [[{ today }]] = await db.query("SELECT DATE_FORMAT(CURDATE(), '%Y-%m-%d') as today")
+    const [[{ today }]] = await db.query(`SELECT ${dateText('CURRENT_DATE')} as today`)
 
     res.json({
 
@@ -531,7 +532,7 @@ exports.getTableHistory = async (req, res) => {
 
       SELECT
 
-        DATE_FORMAT(orders.created_at, '%Y-%m-%d') as date,
+        ${dateText('orders.created_at')} as date,
 
         COUNT(DISTINCT orders.id) as total_orders,
 
@@ -539,9 +540,9 @@ exports.getTableHistory = async (req, res) => {
 
       FROM orders
 
-      WHERE ${PAID_ORDER_FILTER} AND orders.created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+      WHERE ${PAID_ORDER_FILTER} AND orders.created_at >= ${daysBeforeToday}
 
-      GROUP BY DATE_FORMAT(orders.created_at, '%Y-%m-%d')
+      GROUP BY ${dateText('orders.created_at')}
 
       ORDER BY date DESC
 

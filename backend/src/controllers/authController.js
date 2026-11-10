@@ -12,7 +12,8 @@ exports.register = async (req, res) => {
 
   try {
 
-    const { name, email, password, role } = req.body
+    const { name, email, password } = req.body
+    const role = 'customer'
 
     if (!name || !email || !password) {
 
@@ -80,7 +81,7 @@ exports.login = async (req, res) => {
 
     }
 
-    const [users] = await db.query('SELECT * FROM users WHERE email = ? AND is_active = 1', [email])
+    const [users] = await db.query('SELECT * FROM users WHERE email = ? AND is_active = TRUE', [email])
 
     if (!users.length) {
 

@@ -6,8 +6,9 @@ const pushController = require('../controllers/pushController')
 
 router.get('/vapid-public-key', pushController.getPublicKey)
 
-router.post('/subscribe', pushController.subscribe)
+const { auth } = require('../middleware/auth')
+router.post('/subscribe', auth, pushController.subscribe)
 
-router.post('/unsubscribe', pushController.unsubscribe)
+router.post('/unsubscribe', auth, pushController.unsubscribe)
 
 module.exports = router

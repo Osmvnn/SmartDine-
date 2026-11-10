@@ -3,7 +3,8 @@
 
     <div v-if="showRefundModal && selectedPayment" class="modal-overlay" @click.self="closeRefundModal">
       <div class="modal-card">
-        <h5><i class="bi bi-arrow-counterclockwise"></i> Refund Payment</h5>
+        <h5><i class="bi bi-arrow-counterclockwise"></i> Record Refund</h5>
+        <p>Return the collected funds separately before recording this refund. This action does not transfer money.</p>
         <p class="refund-summary">
           Order #{{ selectedPayment.order_id }} - Table #{{ selectedPayment.table_number }} -
           <strong>{{ formatAmount(selectedPayment.amount) }}</strong>
@@ -26,7 +27,7 @@
         <div class="modal-actions">
           <button class="btn-cancel" @click="closeRefundModal">Cancel</button>
           <button class="btn-refund-confirm" :disabled="!refundForm.reason || refunding" @click="submitRefund">
-            {{ refunding ? 'Processing...' : 'Confirm Refund' }}
+            {{ refunding ? 'Processing...' : 'Record Returned Funds' }}
           </button>
         </div>
       </div>
@@ -95,9 +96,7 @@
               <span v-else class="text-muted">-</span>
             </td>
             <td>
-              <a :href="`${apiBase}/api/receipts/${p.order_id}`" target="_blank" class="btn-receipt">
-                <i class="bi bi-receipt"></i> Receipt
-              </a>
+              <button @click="saveReceipt(p.order_id)" class="btn-receipt"><i class="bi bi-receipt"></i> Receipt</button>
               <button v-if="p.status === 'paid'" class="btn-refund" @click="openRefundModal(p)">
                 <i class="bi bi-arrow-counterclockwise"></i> Refund
               </button>
@@ -121,14 +120,19 @@
 </template>
 
 <script setup>
+import { downloadReceipt } from '../services/receipts'
 import { ref, onMounted, onUnmounted } from 'vue'
 import api from '../services/api'
-import { API_BASE_URL } from '../services/api'
+
 import { useToastStore } from '../store/toast'
 import { formatMoney, getCurrency } from '../utils/currency'
 
 const toast = useToastStore()
-const apiBase = API_BASE_URL
+const saveReceipt = async (id) => {
+  try { await downloadReceipt(id) }
+  catch { toast.error('Unable to download receipt') }
+}
+
 
 const payments = ref([])
 const loading = ref(false)

@@ -1,4 +1,5 @@
 const db = require('../config/db')
+const { dateText, daysBeforeToday, sevenDaysBeforeNow } = require('../config/reportSql')
 const { getClientIp } = require('../services/securityLog')
 
 const SUSPICIOUS_EVENTS = ['failed_login', 'rate_limited', 'invalid_token', 'forbidden', 'unauthorized']
@@ -10,22 +11,22 @@ exports.getSecuritySummary = async (req, res) => {
     const [[today]] = await db.query(`
       SELECT
         COUNT(*) as total,
-        COALESCE(SUM(event_type = 'failed_login'), 0) as failed_logins,
-        COALESCE(SUM(event_type = 'rate_limited'), 0) as rate_limited,
-        COALESCE(SUM(event_type IN ('unauthorized', 'forbidden', 'invalid_token')), 0) as unauthorized,
+        SUM(CASE WHEN event_type = 'failed_login' THEN 1 ELSE 0 END) as failed_logins,
+        SUM(CASE WHEN event_type = 'rate_limited' THEN 1 ELSE 0 END) as rate_limited,
+        SUM(CASE WHEN event_type IN ('unauthorized', 'forbidden', 'invalid_token') THEN 1 ELSE 0 END) as unauthorized,
         COUNT(DISTINCT ip_address) as unique_ips
       FROM security_events
-      WHERE DATE(created_at) = CURDATE()
+      WHERE DATE(created_at) = CURRENT_DATE
     `)
 
     const [topIps] = await db.query(`
       SELECT
         ip_address,
         COUNT(*) as event_count,
-        COALESCE(SUM(event_type = 'failed_login'), 0) as failed_logins,
+        SUM(CASE WHEN event_type = 'failed_login' THEN 1 ELSE 0 END) as failed_logins,
         MAX(created_at) as last_seen
       FROM security_events
-      WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+      WHERE created_at >= ${sevenDaysBeforeNow}
       GROUP BY ip_address
       ORDER BY event_count DESC
       LIMIT 10
@@ -61,14 +62,14 @@ exports.getSecurityHistory = async (req, res) => {
 
     const [rows] = await db.query(`
       SELECT
-        DATE_FORMAT(created_at, '%Y-%m-%d') as date,
+        ${dateText('created_at')} as date,
         COUNT(*) as total,
-        COALESCE(SUM(event_type = 'failed_login'), 0) as failed_logins,
-        COALESCE(SUM(event_type = 'rate_limited'), 0) as rate_limited,
-        COALESCE(SUM(event_type IN ('unauthorized', 'forbidden', 'invalid_token')), 0) as unauthorized
+        SUM(CASE WHEN event_type = 'failed_login' THEN 1 ELSE 0 END) as failed_logins,
+        SUM(CASE WHEN event_type = 'rate_limited' THEN 1 ELSE 0 END) as rate_limited,
+        SUM(CASE WHEN event_type IN ('unauthorized', 'forbidden', 'invalid_token') THEN 1 ELSE 0 END) as unauthorized
       FROM security_events
-      WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
-      GROUP BY DATE_FORMAT(created_at, '%Y-%m-%d')
+      WHERE created_at >= ${daysBeforeToday}
+      GROUP BY ${dateText('created_at')}
       ORDER BY date DESC
     `, [days])
 
@@ -127,9 +128,14 @@ exports.blockIp = async (req, res) => {
     }
 
     await db.query(
-      `INSERT INTO blocked_ips (ip_address, reason, blocked_by) VALUES (?, ?, ?)
-       ON DUPLICATE KEY UPDATE reason = ?, blocked_by = ?, created_at = NOW()`,
-      [ip_address.trim(), reason || null, req.user.id, reason || null, req.user.id]
+      process.env.DB_PROVIDER === 'postgres'
+        ? `INSERT INTO blocked_ips (ip_address, reason, blocked_by) VALUES (?, ?, ?)
+           ON CONFLICT (ip_address) DO UPDATE SET reason = EXCLUDED.reason, blocked_by = EXCLUDED.blocked_by, created_at = NOW()`
+        : `INSERT INTO blocked_ips (ip_address, reason, blocked_by) VALUES (?, ?, ?)
+           ON DUPLICATE KEY UPDATE reason = ?, blocked_by = ?, created_at = NOW()`,
+      process.env.DB_PROVIDER === 'postgres'
+        ? [ip_address.trim(), reason || null, req.user.id]
+        : [ip_address.trim(), reason || null, req.user.id, reason || null, req.user.id]
     )
 
     res.json({ success: true, message: `IP ${ip_address} has been blocked` })

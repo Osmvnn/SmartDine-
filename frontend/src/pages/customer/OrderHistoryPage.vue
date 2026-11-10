@@ -104,9 +104,7 @@
               <button class="btn-sm" @click="reorder(order)">
                 <i class="bi bi-arrow-repeat"></i> Reorder
               </button>
-              <a :href="`${apiBase}/api/receipts/${order.id}`" target="_blank" class="btn-sm btn-outline">
-                <i class="bi bi-receipt"></i> Receipt
-              </a>
+              <button @click="saveReceipt(order.id)" class="btn-sm btn-outline"><i class="bi bi-receipt"></i> Receipt</button>
               <router-link :to="`/customer/order/${order.id}`" class="btn-sm btn-outline">
                 <i class="bi bi-eye"></i> Track
               </router-link>
@@ -120,11 +118,12 @@
 </template>
 
 <script setup>
+import { downloadReceipt } from '../../services/receipts'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCartStore } from '../../store/cart'
 import { useAuthStore } from '../../store/auth'
-import api, { API_BASE_URL } from '../../services/api'
+import api from '../../services/api'
 import { useToastStore } from '../../store/toast'
 import { useSocketStore } from '../../store/socket'
 import { getFoodEmoji } from '../../utils/foodEmoji'
@@ -132,13 +131,17 @@ import { formatMoney, getCurrency } from '../../utils/currency'
 
 const router = useRouter()
 const toast = useToastStore()
+const saveReceipt = async (id) => {
+  try { await downloadReceipt(id) }
+  catch { toast.error('Unable to download receipt') }
+}
 const cartStore = useCartStore()
 const authStore = useAuthStore()
 const socketStore = useSocketStore()
 
 const orders = ref([])
 const loading = ref(true)
-const apiBase = API_BASE_URL
+
 const flashedOrderIds = ref([])
 const currency = ref(getCurrency())
 

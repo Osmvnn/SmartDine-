@@ -10,7 +10,7 @@ exports.createOrder = async (req, res) => {
 
     const { table_id, notes, items, payment_method, promo_code, payment_type, loyalty_points_redeemed, redeemed_reward_id } = req.body
 
-    const customer_id = req.user ? req.user.id : null
+    const customer_id = req.user.role === 'customer' ? req.user.id : null
 
     if (!table_id || !Array.isArray(items) || (items.length === 0 && !redeemed_reward_id)) {
 
@@ -30,7 +30,7 @@ exports.createOrder = async (req, res) => {
 
     const [tableRows] = await connection.query(
 
-      'SELECT * FROM restaurant_tables WHERE id = ? LIMIT 1',
+      'SELECT * FROM restaurant_tables WHERE id = ? LIMIT 1 FOR UPDATE',
 
       [table_id]
 
@@ -54,7 +54,7 @@ exports.createOrder = async (req, res) => {
 
     const [sessionRows] = await connection.query(
 
-      'SELECT * FROM table_sessions WHERE table_id = ? AND status = "active" LIMIT 1',
+      `SELECT * FROM table_sessions WHERE table_id = ? AND status = 'active' LIMIT 1`,
 
       [table_id]
 
@@ -68,11 +68,11 @@ exports.createOrder = async (req, res) => {
 
     } else {
 
-      const token = `session_${table_id}_${Date.now()}`
+      const token = require('crypto').randomBytes(32).toString('hex')
 
       const [sessionResult] = await connection.query(
 
-        'INSERT INTO table_sessions (table_id, session_token, status) VALUES (?, ?, "active")',
+        `INSERT INTO table_sessions (table_id, session_token, status) VALUES (?, ?, 'active')`,
 
         [table_id, token]
 
@@ -82,7 +82,22 @@ exports.createOrder = async (req, res) => {
 
     }
 
-    const menuItemIds = items.map(item => item.menu_item_id)
+    // Include reward stock in the same ordered lock set as purchased items.
+    if (customer_id && (redeemed_reward_id || loyalty_points_redeemed)) {
+      await connection.query('SELECT id FROM users WHERE id = ? FOR UPDATE', [customer_id])
+    }
+    let rewardItemId = null
+    if (redeemed_reward_id) {
+      const [[reward]] = await connection.query(
+        'SELECT * FROM loyalty_rewards WHERE id = ? AND is_active = TRUE FOR UPDATE',
+        [Number(redeemed_reward_id)]
+      )
+      rewardItemId = reward?.menu_item_id || null
+    }
+    const demand = new Map()
+    for (const item of items) demand.set(item.menu_item_id, (demand.get(item.menu_item_id) || 0) + item.quantity)
+    if (rewardItemId) demand.set(rewardItemId, (demand.get(rewardItemId) || 0) + 1)
+    const menuItemIds = [...demand.keys()].sort((a, b) => a - b)
 
     const placeholders = menuItemIds.map(() => '?').join(',')
 
@@ -90,7 +105,7 @@ exports.createOrder = async (req, res) => {
 
       ? await connection.query(
 
-          `SELECT id, name, price, is_available, stock_quantity FROM menu_items WHERE id IN (${placeholders})`,
+          `SELECT id, name, price, is_available, stock_quantity FROM menu_items WHERE id IN (${placeholders}) ORDER BY id FOR UPDATE`,
 
           menuItemIds
 
@@ -110,6 +125,14 @@ exports.createOrder = async (req, res) => {
 
       : [[]]
 
+    for (const [id, quantity] of demand) {
+      const found = menuRows.find(row => row.id === id)
+      if (!found || !found.is_available || (found.stock_quantity >= 0 && found.stock_quantity < quantity)) {
+        await connection.rollback()
+        connection.release()
+        return res.status(400).json({ success: false, message: 'Item ' + id + ' is unavailable or has insufficient stock' })
+      }
+    }
     const itemModifiers = new Map()
 
     let total = 0
@@ -186,7 +209,7 @@ exports.createOrder = async (req, res) => {
 
       const [promos] = await connection.query(
 
-        'SELECT * FROM promo_codes WHERE code = ? AND is_active = 1 LIMIT 1',
+        'SELECT * FROM promo_codes WHERE code = ? AND is_active = TRUE LIMIT 1',
 
         [promo_code.toUpperCase()]
 
@@ -298,7 +321,7 @@ exports.createOrder = async (req, res) => {
 
     const [orderResult] = await connection.query(
 
-      'INSERT INTO orders (table_id, session_id, customer_id, status, total, notes, promo_code_id, discount_amount, payment_type) VALUES (?, ?, ?, "pending", ?, ?, ?, ?, ?)',
+      `INSERT INTO orders (table_id, session_id, customer_id, status, total, notes, promo_code_id, discount_amount, payment_type) VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?)`,
 
       [table_id, sessionId, customer_id || null, total, notes || null, promoId, discountAmount, payment_type || 'online']
 
@@ -336,18 +359,6 @@ exports.createOrder = async (req, res) => {
 
       )
 
-      if (rewardRedemption.item.stock_quantity >= 0) {
-
-        await connection.query(
-
-          'UPDATE menu_items SET stock_quantity = stock_quantity - 1 WHERE id = ?',
-
-          [rewardRedemption.item.id]
-
-        )
-
-      }
-
       const { recordRewardRedemption } = require('./loyaltyController')
 
       await recordRewardRedemption(connection, {
@@ -380,35 +391,22 @@ exports.createOrder = async (req, res) => {
 
       )
 
-      if (found.stock_quantity >= 0) {
+    }
 
-        await connection.query(
-
-          'UPDATE menu_items SET stock_quantity = stock_quantity - ? WHERE id = ?',
-
-          [item.quantity, item.menu_item_id]
-
-        )
-
-        const newStock = found.stock_quantity - item.quantity
-
-        if (newStock <= 0 && found.stock_quantity > 0) {
-
-          lowStockAlerts.push({ menu_item_id: item.menu_item_id, name: found.name, stock_quantity: Math.max(newStock, 0), level: 'out' })
-
-        } else if (newStock <= LOW_STOCK_THRESHOLD && found.stock_quantity > LOW_STOCK_THRESHOLD) {
-
-          lowStockAlerts.push({ menu_item_id: item.menu_item_id, name: found.name, stock_quantity: newStock, level: 'low' })
-
-        }
-
+    // Reserve aggregate demand once, while all item locks are held.
+    for (const [id, quantity] of demand) {
+      const found = menuRows.find(row => row.id === id)
+      if (found.stock_quantity < 0) continue
+      await connection.query('UPDATE menu_items SET stock_quantity = stock_quantity - ? WHERE id = ?', [quantity, id])
+      const newStock = found.stock_quantity - quantity
+      if (newStock === 0 || (newStock <= LOW_STOCK_THRESHOLD && found.stock_quantity > LOW_STOCK_THRESHOLD)) {
+        lowStockAlerts.push({ menu_item_id: id, name: found.name, stock_quantity: newStock, level: newStock === 0 ? 'out' : 'low' })
       }
-
     }
 
     await connection.query(
 
-      'INSERT INTO payments (order_id, amount, method, payment_timing, status) VALUES (?, ?, ?, ?, "pending")',
+      `INSERT INTO payments (order_id, amount, method, payment_timing, status) VALUES (?, ?, ?, ?, 'pending')`,
 
       [orderId, total, payment_method || 'card', payment_type === 'physical' ? 'post' : 'pre']
 
@@ -424,7 +422,7 @@ exports.createOrder = async (req, res) => {
 
     await connection.query(
 
-      'UPDATE restaurant_tables SET status = "occupied" WHERE id = ?',
+      `UPDATE restaurant_tables SET status = 'occupied' WHERE id = ?`,
 
       [table_id]
 
@@ -466,13 +464,7 @@ exports.createOrder = async (req, res) => {
 
     } catch { }
 
-    try {
 
-      const { earnPoints } = require('./loyaltyController')
-
-      await earnPoints(orderId, sessionId, total, customer_id || null)
-
-    } catch { }
 
     res.status(201).json({
 
@@ -656,6 +648,7 @@ exports.updateOrderStatus = async (req, res) => {
 
     const { status } = req.body
 
+    if (status === 'cancelled' && ['admin', 'manager', 'waiter'].includes(req.user.role)) return exports.cancelOrder(req, res)
     await transitionOrderStatus(id, status, { role: req.user.role })
 
     res.json({
@@ -672,7 +665,7 @@ exports.updateOrderStatus = async (req, res) => {
 
       success: false,
 
-      message: 'Failed to update order status',
+      message: error.statusCode ? error.message : 'Failed to update order status',
 
       error: error.message
 
@@ -684,11 +677,14 @@ exports.updateOrderStatus = async (req, res) => {
 
 exports.cancelOrder = async (req, res) => {
 
+  const connection = await db.getConnection()
+  let committed = false
   try {
+    await connection.beginTransaction()
 
     const { id } = req.params
 
-    const [orders] = await db.query('SELECT * FROM orders WHERE id = ?', [id])
+    const [orders] = await connection.query('SELECT * FROM orders WHERE id = ? FOR UPDATE', [id])
 
     if (!orders.length) {
 
@@ -708,15 +704,17 @@ exports.cancelOrder = async (req, res) => {
 
     }
 
-    const [orderItems] = await db.query(
+    const [[settled]] = await connection.query("SELECT COUNT(*) AS count FROM payments WHERE order_id = ? AND status = 'paid'", [id])
+    if (Number(settled.count) > 0) return res.status(409).json({ success: false, message: 'Ask staff to refund collected payments before cancelling' })
+    const [orderItems] = await connection.query(
 
-      'SELECT menu_item_id, quantity FROM order_items WHERE order_id = ?', [id]
+      'SELECT menu_item_id, quantity FROM order_items WHERE order_id = ? ORDER BY menu_item_id', [id]
 
     )
 
     for (const oi of orderItems) {
 
-      await db.query(
+      await connection.query(
 
         'UPDATE menu_items SET stock_quantity = stock_quantity + ? WHERE id = ? AND stock_quantity >= 0',
 
@@ -730,7 +728,7 @@ exports.cancelOrder = async (req, res) => {
 
     if (order.promo_code_id) {
 
-      await db.query(
+      await connection.query(
 
         'UPDATE promo_codes SET used_count = GREATEST(used_count - 1, 0) WHERE id = ?',
 
@@ -740,9 +738,9 @@ exports.cancelOrder = async (req, res) => {
 
     }
 
-    await db.query('UPDATE orders SET status = "cancelled" WHERE id = ?', [id])
+    await connection.query("UPDATE orders SET status = 'cancelled' WHERE id = ?", [id])
 
-    await db.query(
+    await connection.query(
 
       'INSERT INTO order_status_history (order_id, status) VALUES (?, ?)',
 
@@ -750,22 +748,28 @@ exports.cancelOrder = async (req, res) => {
 
     )
 
-    await db.query(
+    await connection.query(
 
-      'UPDATE payments SET status = "refunded" WHERE order_id = ?',
+      `UPDATE payments SET status = 'failed' WHERE order_id = ? AND status = 'pending'`,
 
       [id]
 
     )
 
+    await connection.query("DELETE FROM loyalty_points WHERE order_id = ?", [id])
+    await connection.commit()
+    committed = true
+    await require('../services/orderWorkflow').emitOrderStatus(id, 'cancelled')
     res.json({ success: true, message: 'Order cancelled successfully' })
 
   } catch (error) {
 
     res.status(500).json({ success: false, message: error.message })
 
+  } finally {
+    if (!committed) await connection.rollback()
+    connection.release()
   }
-
 }
 
 exports.rateOrder = async (req, res) => {

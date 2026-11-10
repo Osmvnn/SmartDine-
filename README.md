@@ -1,90 +1,58 @@
 # SmartDine - Restaurant Management System
 
-A full-stack restaurant management and ordering platform: customers order from
-their table via QR code, while staff (admin, manager, kitchen, waiter, cashier)
-manage menus, orders, payments, reservations, and inventory in real time.
+SmartDine is a Vue and Express application for table QR ordering, staff operations, payments, reservations, and inventory.
 
-## Tech Stack
+## Requirements
 
-- **Backend**: Node.js, Express, MySQL (mysql2), Socket.io, JWT auth
-- **Frontend**: Vue 3, Vite, Pinia, Vue Router, Bootstrap 5, Socket.io client
+- Node.js 20 or newer, npm, and a Supabase PostgreSQL database
+- Vue 3, Vite, Pinia, Bootstrap, and Socket.IO on the frontend
+- Express, JWT, Socket.IO, and PostgreSQL (`pg`) on the backend
 
-## Prerequisites
+The Vue app calls Express. Keep the database connection string and JWT secret in `backend/.env`, never in frontend variables. MySQL files remain for legacy local setups; the active database and seed command use PostgreSQL.
 
-- Node.js v20 or higher
-- MySQL 8.x (e.g. via XAMPP)
-- npm (included with Node.js)
+## Database and backend
 
-## Database Setup
+The hosted database already has the schema in the [baseline migration](supabase/migrations/20261110125704_baseline.sql). Apply migrations in timestamp order on a new database. On an existing database, compare it with the baseline before marking that migration applied; do not reapply the baseline over populated tables. See [Supabase setup](supabase/README.md).
 
-1. Start MySQL.
-2. Create a new database named `smart_restaurant` (the schema script does this
-   for you if you run it directly with the MySQL CLI):
-   ```bash
-   mysql -u root -p < backend/database/schema.sql
-   ```
-   This creates all required tables.
-
-## Backend Setup
-
-```bash
+```powershell
 cd backend
 npm install
-copy .env.example .env
+Copy-Item .env.example .env
 ```
 
-Open `.env` and set:
-- `DB_PASSWORD` - your MySQL root password (leave empty for XAMPP default)
-- `JWT_SECRET` - any long random string (a default is pre-filled)
+Set `DB_PROVIDER=postgres`, `DATABASE_URL` to the Supabase session pooler URI, `DB_SSL=true`, `JWT_SECRET` to a long random value, `ALLOWED_ORIGINS` to the frontend origin, and `PORT=5000`. Set `DB_SSL_CA_FILE` to verify the server certificate when the project CA is available. Then run:
 
-Seed the database with demo data:
-```bash
+```powershell
+npm run db:check
 npm run seed
-```
-
-Start the backend server:
-```bash
 npm start
 ```
-The server runs on `http://localhost:5000`.
 
-## Frontend Setup
+The seed creates a sample catalog. To create the first admin, set both `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` (at least 16 characters) before seeding. It does not reset an existing admin password. There are no universal default staff passwords.
 
-```bash
+## Frontend
+
+```powershell
 cd frontend
 npm install
-copy .env.example .env
-```
-The default `.env` points to `http://localhost:5000/api`, which is correct for
-local development.
-
-Start the frontend dev server:
-```bash
+Copy-Item .env.example .env
 npm run dev
 ```
-The application runs on `http://localhost:5173`.
 
-## Accessing the System
+Use `VITE_API_URL=http://localhost:5000/api` in `frontend/.env`, then visit http://localhost:5173. Staff sign in at `/login`; customers scan a table QR code and sign in before ordering.
 
-**Staff Login** - `http://localhost:5173/login` (all accounts use password `SmartDine@2024`):
+## Verification
 
-| Role    | Email              |
-|---------|--------------------|
-| Admin   | admin@smart.com    |
-| Manager | manager@smart.com  |
-| Kitchen | kitchen@smart.com  |
-| Waiter  | waiter@smart.com   |
-| Cashier | cashier@smart.com  |
+From the repository root:
 
-**Customer Access** - scan a table's QR code, or navigate directly to
-`http://localhost:5173/table/table_1`.
+```powershell
+npm test --prefix backend
+npm run build --prefix frontend
+npm run db:check --prefix backend
+node backend/scripts/verify-migrations.js
+node backend/scripts/verify-postgres-workflows.js
+```
 
-## Roles & Features
+The last two commands contact the configured PostgreSQL database. Migration verification rolls back its isolated schema. Workflow verification creates tagged test records and removes them; run it against a development database. `npm run db:smoke --prefix backend` provides a broader API smoke check.
 
-- **Admin** - full system control: users, tables, menu, orders, reservations, shifts
-- **Manager** - sales reports, inventory management, promo codes, reservations
-- **Kitchen** - view and update order status in real time, order history
-- **Waiter** - manage assigned tables, handle waiter requests, clock in/out
-- **Cashier** - confirm pending physical payments
-- **Customer** - browse menu, place orders, pay, request waiter, make
-  reservations, earn loyalty points
+Online payments need a real provider. See [security and payment notes](docs/SECURITY_CHANGES.md) and the [development roadmap](DEVELOPMENT_ROADMAP.md).

@@ -30,7 +30,8 @@ exports.fetchBalance = fetchBalance
 
 exports.getRewards = async (req, res) => {
   try {
-    const { user_id, session_id } = req.query
+    const user_id = req.user.id
+    const session_id = null
     const cond = balanceCondition(user_id, session_id)
     const balance = cond ? await fetchBalance(db, user_id, session_id) : 0
 
@@ -39,7 +40,7 @@ exports.getRewards = async (req, res) => {
              menu_items.id as menu_item_id, menu_items.name as item_name, menu_items.price as item_price, menu_items.image_url
       FROM loyalty_rewards
       LEFT JOIN menu_items ON loyalty_rewards.menu_item_id = menu_items.id
-      WHERE loyalty_rewards.is_active = 1
+      WHERE loyalty_rewards.is_active = TRUE
       ORDER BY loyalty_rewards.points_cost ASC
     `)
 
@@ -53,7 +54,7 @@ exports.validateRewardRedemption = async (connection, { user_id, session_id, rew
   if (!user_id && !session_id) return null
 
   const [[reward]] = await connection.query(
-    'SELECT * FROM loyalty_rewards WHERE id = ? AND is_active = 1',
+    'SELECT * FROM loyalty_rewards WHERE id = ? AND is_active = TRUE',
     [rewardId]
   )
   if (!reward || !reward.menu_item_id) return null
@@ -69,14 +70,15 @@ exports.validateRewardRedemption = async (connection, { user_id, session_id, rew
 
 exports.recordRewardRedemption = async (connection, { user_id, session_id, orderId, reward }) => {
   await connection.query(
-    'INSERT INTO loyalty_points (session_id, user_id, points, type, order_id, description) VALUES (?, ?, ?, "redeemed", ?, ?)',
-    [session_id || null, user_id || null, reward.points_cost, orderId, `Redeemed ${reward.points_cost} points for free ${reward.name} on order #${orderId}`]
+    'INSERT INTO loyalty_points (session_id, user_id, points, type, order_id, description) VALUES (?, ?, ?, ?, ?, ?)',
+    [session_id || null, user_id || null, reward.points_cost, 'redeemed', orderId, `Redeemed ${reward.points_cost} points for free ${reward.name} on order #${orderId}`]
   )
 }
 
 exports.getBalance = async (req, res) => {
   try {
-    const { session_id, user_id } = req.query
+    const user_id = req.user.id
+    const session_id = null
     const cond = balanceCondition(user_id, session_id)
 
     if (!cond) {
@@ -101,8 +103,8 @@ exports.earnPoints = async (order_id, session_id, total, user_id = null) => {
   if (points <= 0) return 0
 
   await db.query(
-    'INSERT INTO loyalty_points (session_id, user_id, points, type, order_id, description) VALUES (?, ?, ?, "earned", ?, ?)',
-    [session_id, user_id, points, order_id, `Earned from order #${order_id}`]
+    'INSERT INTO loyalty_points (session_id, user_id, points, type, order_id, description) VALUES (?, ?, ?, ?, ?, ?)',
+    [session_id, user_id, points, 'earned', order_id, `Earned from order #${order_id}`]
   )
 
   return points
@@ -127,14 +129,16 @@ exports.recordRedemption = async (connection, { user_id, session_id, orderId, po
   if (!pointsUsed || pointsUsed <= 0) return
 
   await connection.query(
-    'INSERT INTO loyalty_points (session_id, user_id, points, type, order_id, description) VALUES (?, ?, ?, "redeemed", ?, ?)',
-    [session_id || null, user_id || null, pointsUsed, orderId, `Redeemed ${pointsUsed} points for $${discount.toFixed(2)} discount on order #${orderId}`]
+    'INSERT INTO loyalty_points (session_id, user_id, points, type, order_id, description) VALUES (?, ?, ?, ?, ?, ?)',
+    [session_id || null, user_id || null, pointsUsed, 'redeemed', orderId, `Redeemed ${pointsUsed} points for $${discount.toFixed(2)} discount on order #${orderId}`]
   )
 }
 
 exports.redeemPoints = async (req, res) => {
   try {
-    const { session_id, user_id, points } = req.body
+    const { points } = req.body
+    const user_id = req.user.id
+    const session_id = null
 
     if (!points || points <= 0) {
       return res.status(400).json({ success: false, message: 'Valid points amount required' })
@@ -154,8 +158,8 @@ exports.redeemPoints = async (req, res) => {
     const discount = (points / POINTS_PER_DOLLAR).toFixed(2)
 
     await db.query(
-      'INSERT INTO loyalty_points (session_id, user_id, points, type, description) VALUES (?, ?, ?, "redeemed", ?)',
-      [session_id || null, user_id || null, points, `Redeemed ${points} points for $${discount} discount`]
+      'INSERT INTO loyalty_points (session_id, user_id, points, type, description) VALUES (?, ?, ?, ?, ?)',
+      [session_id || null, user_id || null, points, 'redeemed', `Redeemed ${points} points for $${discount} discount`]
     )
 
     res.json({ success: true, data: { discount: Number(discount), pointsUsed: points } })

@@ -124,7 +124,7 @@ exports.validatePromo = async (req, res) => {
 
     const [rows] = await db.query(
 
-      'SELECT * FROM promo_codes WHERE code = ? AND is_active = 1 LIMIT 1',
+      'SELECT * FROM promo_codes WHERE code = ? AND is_active = TRUE LIMIT 1',
 
       [code.toUpperCase()]
 

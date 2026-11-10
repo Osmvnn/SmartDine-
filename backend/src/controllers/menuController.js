@@ -94,7 +94,7 @@ exports.getGroupedMenu = async (req, res) => {
 
     const [items] = await db.query(
 
-      'SELECT * FROM menu_items WHERE is_available = 1'
+      'SELECT * FROM menu_items WHERE is_available = TRUE'
 
     )
 

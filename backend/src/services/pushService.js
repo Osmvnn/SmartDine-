@@ -40,15 +40,16 @@ async function notifySession(sessionId, payload) {
 
 async function notifyUser(userId, payload) {
   if (!userId) return
-  const [subs] = await db.query('SELECT * FROM push_subscriptions WHERE user_id = ?', [userId])
+  const [subs] = await db.query('SELECT ps.* FROM push_subscriptions ps JOIN users u ON u.id = ps.user_id WHERE ps.user_id = ? AND u.is_active = TRUE', [userId])
   await sendToSubscriptions(subs, payload)
 }
 
 async function notifyRoles(roles, payload) {
   if (!roles?.length) return
+  const placeholders = roles.map(() => '?').join(', ')
   const [subs] = await db.query(
-    `SELECT ps.* FROM push_subscriptions ps JOIN users u ON u.id = ps.user_id WHERE u.role IN (?)`,
-    [roles]
+    `SELECT ps.* FROM push_subscriptions ps JOIN users u ON u.id = ps.user_id WHERE u.is_active = TRUE AND u.role IN (${placeholders})`,
+    roles
   )
   await sendToSubscriptions(subs, payload)
 }

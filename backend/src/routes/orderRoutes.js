@@ -21,44 +21,25 @@ const createOrderLimiter = rateLimit({
   }
 })
 
-const optionalAuth = (req, res, next) => {
+const { orderAccess, tableAccess, sessionAccess } = require('../middleware/resourceAccess')
+const { createOrderAccess } = require('../middleware/customerAccess')
 
-  const header = req.header('Authorization')
-
-  if (!header) return next()
-
-  const token = header.replace('Bearer ', '')
-
-  try {
-
-    const jwt = require('jsonwebtoken')
-
-    const { JWT_SECRET } = require('../middleware/auth')
-
-    req.user = jwt.verify(token, JWT_SECRET)
-
-  } catch { }
-
-  next()
-
-}
-
-router.post('/', createOrderLimiter, optionalAuth, orderController.createOrder)
+router.post('/', createOrderLimiter, auth, createOrderAccess, orderController.createOrder)
 
 router.get('/my', auth, orderController.getMyOrders)
 
-router.get('/session/:session_id', orderController.getOrdersBySession)
+router.get('/session/:session_id', auth, sessionAccess, orderController.getOrdersBySession)
 
-router.get('/table/:table_id', orderController.getOrdersByTable)
+router.get('/table/:table_id', auth, tableAccess(req => req.params.table_id), orderController.getOrdersByTable)
 
-router.get('/:id', orderController.getOrderById)
+router.get('/:id', auth, orderAccess(req => req.params.id), orderController.getOrderById)
 
-router.put('/:id/status', auth, authorize('admin', 'manager', 'kitchen', 'waiter'), orderController.updateOrderStatus)
+router.put('/:id/status', auth, authorize('admin', 'manager', 'kitchen', 'waiter'), orderAccess(req => req.params.id), orderController.updateOrderStatus)
 
-router.put('/:id/cancel', orderController.cancelOrder)
+router.put('/:id/cancel', auth, orderAccess(req => req.params.id, ['admin', 'manager', 'waiter']), orderController.cancelOrder)
 
-router.post('/:id/rate', orderController.rateOrder)
+router.post('/:id/rate', auth, authorize('customer'), orderAccess(req => req.params.id, []), orderController.rateOrder)
 
-router.get('/:id/rating', orderController.getOrderRating)
+router.get('/:id/rating', auth, orderAccess(req => req.params.id), orderController.getOrderRating)
 
 module.exports = router

@@ -1,4 +1,5 @@
 const db = require('../config/db')
+const { dateText, daysBeforeToday } = require('../config/reportSql')
 const { transitionOrderStatus, transitionOrderItemStatus } = require('../services/orderWorkflow')
 
 exports.getKitchenOrders = async (req, res) => {
@@ -9,7 +10,7 @@ exports.getKitchenOrders = async (req, res) => {
       LEFT JOIN restaurant_tables ON orders.table_id = restaurant_tables.id
       WHERE orders.status IN ('confirmed', 'preparing', 'ready')
       ORDER BY
-        FIELD(orders.status, 'confirmed', 'preparing', 'ready'),
+        CASE orders.status WHEN 'confirmed' THEN 1 WHEN 'preparing' THEN 2 WHEN 'ready' THEN 3 END,
         orders.created_at ASC
     `)
 
@@ -44,11 +45,11 @@ exports.getOrdersHistory = async (req, res) => {
 
     const [rows] = await db.query(`
       SELECT
-        DATE_FORMAT(created_at, '%Y-%m-%d') as date,
+        ${dateText('created_at')} as date,
         COUNT(*) as order_count
       FROM orders
-      WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
-      GROUP BY DATE_FORMAT(created_at, '%Y-%m-%d')
+      WHERE created_at >= ${daysBeforeToday}
+      GROUP BY ${dateText('created_at')}
       ORDER BY date DESC
     `, [days])
 

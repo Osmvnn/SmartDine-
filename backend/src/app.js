@@ -28,7 +28,7 @@ const { checkBlockedIp } = require('./middleware/blockCheck')
 const app = express()
 
 app.use(cors({
-  origin: true,
+  origin: (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173').split(',').map(s => s.trim()),
   credentials: true
 }))
 
@@ -79,5 +79,11 @@ app.use('/api/shifts', shiftRoutes)
 app.use('/api/receipts', receiptRoutes)
 app.use('/api/inventory', inventoryRoutes)
 app.use('/api/push', pushRoutes)
+
+app.use((error, req, res, next) => {
+  if (res.headersSent) return next(error)
+  console.error('Request failed:', error.message)
+  res.status(error.statusCode || 500).json({ success: false, message: 'Unable to complete request' })
+})
 
 module.exports = app

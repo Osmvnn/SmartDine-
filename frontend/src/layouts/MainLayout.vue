@@ -47,7 +47,9 @@ onMounted(() => {
   }
 })
 
-watch(() => auth.isLoggedIn, (loggedIn) => {
+watch(() => auth.token, (token) => {
+  socketStore.disconnect()
+  const loggedIn = !!token
   if (loggedIn && auth.role) {
     socketStore.connect()
     socketStore.joinRoom(auth.role)

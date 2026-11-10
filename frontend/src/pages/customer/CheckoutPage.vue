@@ -21,11 +21,12 @@
         <p v-else class="amount">{{ formatAmount(paidAmount) }}</p>
 
         <p class="success-msg">
-          <template v-if="paymentTiming === 'post' && splitSummary.length > 1">Your order was sent to the kitchen. A waiter or cashier will collect each person's share after you eat.</template>
+          <template v-if="Number(paidAmount) === 0">Your no-charge order is being prepared.</template>
+          <template v-else-if="paymentTiming === 'post' && splitSummary.length > 1">Your order was sent to the kitchen. A waiter or cashier will collect each person's share after you eat.</template>
           <template v-else-if="paymentTiming === 'post'">Your order was sent to the kitchen. A waiter will collect payment after you eat.</template>
           <template v-else-if="splitSummary.length > 1 && splitHasPending">Your share was recorded and the remaining guest payments will be collected after eating.</template>
           <template v-else-if="splitSummary.length > 1">Each share was recorded and your order is being prepared.</template>
-          <template v-else>Your payment was approved and your order is being prepared.</template>
+          <template v-else>{{ demoPayments ? 'Demo payment recorded; no money was charged.' : 'Your no-charge order is being prepared.' }}</template>
         </p>
         <p v-if="loyaltyPointsRedeemed > 0" class="loyalty-applied-note">
           <i class="bi bi-gem me-1"></i>{{ loyaltyPointsRedeemed }} loyalty points redeemed for {{ formatAmount(loyaltyPointsRedeemed / POINTS_PER_DOLLAR) }} off
@@ -137,15 +138,17 @@
 
         <div class="section-card">
           <h5>When to Pay?</h5>
+          <p v-if="!onlinePayments">Settle with staff after eating. Online payment is not available.</p>
+          <p v-if="demoPayments">Demo payments simulate success and do not charge money.</p>
           <p class="payment-timing-desc">
             <template v-if="paymentTiming === 'pre'">Pay now and your order is sent straight to the kitchen.</template>
             <template v-else>We'll send your order to the kitchen now - settle the bill with your waiter or cashier after you eat.</template>
           </p>
           <div class="payment-timing-grid">
-            <div :class="['timing-card', paymentTiming === 'pre' ? 'active' : '', method === 'cash' ? 'disabled' : '']" @click="setPaymentTiming('pre')">
+            <div v-if="onlinePayments" :class="['timing-card', paymentTiming === 'pre' ? 'active' : '', method === 'cash' ? 'disabled' : '']" @click="setPaymentTiming('pre')">
               <i class="bi bi-credit-card timing-icon"></i>
-              <span>Pay Now</span>
-              <small>Prepay online</small>
+              <span>Demo Payment</span>
+              <small>Simulation only; no money is charged</small>
             </div>
             <div :class="['timing-card', paymentTiming === 'post' ? 'active' : '']" @click="setPaymentTiming('post')">
               <i class="bi bi-wallet2 timing-icon"></i>
@@ -258,6 +261,8 @@
 </template>
 
 <script setup>
+import { usePaymentCapabilities } from '../../composables/usePaymentCapabilities'
+const { onlinePayments, demoPayments } = usePaymentCapabilities()
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../../services/api'
@@ -281,7 +286,7 @@ const splitCount = ref(2)
 const splitNames = ref([])
 const splitMethods = ref(['card', 'cash'])
 const maxSplit = 10
-const paymentTiming = ref('pre')
+const paymentTiming = ref('post')
 const tipAmount = ref(0)
 const tipOptions = [15, 18, 20]
 const customTipAmount = ref(0)
@@ -476,7 +481,6 @@ const placeOrder = async () => {
         order_id: orderId.value,
         method: 'card',
         payment_timing: 'pre',
-        status: 'paid',
         payer_name: auth.user?.name || 'Loyalty points'
       })
       transactionId.value = 'LOYALTY'
@@ -500,7 +504,6 @@ const placeOrder = async () => {
         order_id: orderId.value,
         method: method.value,
         payment_timing: paymentTiming.value,
-        status: paymentTiming.value === 'post' ? 'pending' : 'paid',
         tip: paymentTiming.value === 'pre' ? tipAmount.value : 0,
         payer_name: auth.user?.name || 'Guest'
       })
